@@ -1,15 +1,18 @@
 #include <restinio/all.hpp>
-#include "routes.hpp"
+#include "api_routes.hpp"
+#include "config.hpp"
 #include "color.hpp"
 
 using namespace restinio;
 
 int main() 
 {
-    // Create express router for our service.
-    auto router = std::make_unique<router::express_router_t<>>();
+    rs::ServerConfig server_cfg("config/server_config.json");
 
-    for (const auto &route : rs::get_routes()) {
+    // Create express router for our service.
+    auto router = std::make_unique<rs::router_t>();
+    
+    for (const auto &route : rs::get_api_routes()) {
         switch (route->method()) {
             case rs::Method::GET : 
                 router->http_get(route->path(), route->gen_callback_func());
@@ -40,18 +43,19 @@ int main()
                 .done();
             });
 
-    // Launching a server with custom traits.
-    struct my_server_traits : public default_single_thread_traits_t {
-        using request_handler_t = restinio::router::express_router_t<>;
-    };
-
     fmt::print("{}Server running on port {}{}{}\n", 
-                  COLOR_GRN, COLOR_YEL, 8080, COLOR_DEF);
+                  COLOR_GRN, COLOR_YEL, server_cfg.port(), COLOR_DEF);
 
-    restinio::run(
-            restinio::on_this_thread<my_server_traits>()
-                    .address("localhost")
-                    .request_handler(std::move(router)));
+        using traits_t =
+            restinio::traits_t<
+                restinio::asio_timer_manager_t,
+                restinio::null_logger_t,
+                rs::router_t>;
+
+    restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
+                  .address(server_cfg.ip())
+                  .port(server_cfg.port())
+                  .request_handler(std::move(router)));
 
     return 0;
 }

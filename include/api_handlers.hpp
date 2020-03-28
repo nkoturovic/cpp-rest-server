@@ -1,8 +1,9 @@
-#include <nlohmann/json.hpp>
+#include "typedefs.hpp"
 
 namespace rs::handlers {
 
-// User
-nlohmann::json user_get(std::optional<nlohmann::json> json_request);
-
+namespace user {
+api_handler_response_t user_get(std::optional<json_t> json_request);
 }
+
+};
