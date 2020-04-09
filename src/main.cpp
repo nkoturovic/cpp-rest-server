@@ -1,9 +1,13 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
+#include "handler.hpp"
+#include "api_handlers.hpp"
 #include "typedefs.hpp"
-#include "api_routes.hpp"
 #include "config.hpp"
 #include "color.hpp"
+
+#define API_URL R"(/api/)"
+#define concat(first, second) first second
 
 using namespace restinio;
 
@@ -11,35 +15,11 @@ int main()
 {
     rs::ServerConfig server_cfg("config/server_config.json");
     soci::session db(soci::sqlite3, "dbname=ImageShare.sqlite");
-    rs::Shared_data sd { db };
-    rs::ApiRoute::initialize_shared_data(&sd);
-
-    // Create express router for our service.
+    rs::Shared_data data { db };
+    rs::ApiHandler::initialize_shared_data(&data);
     auto router = std::make_unique<rs::router_t>();
 
-    
-    for (const auto &route : rs::get_api_routes()) {
-        switch (route.method()) {
-            case rs::Method::GET : 
-                router->http_get(route.path(), std::move(route));
-            break;
-
-            case rs::Method::POST : 
-                router->http_post(route.path(), std::move(route));
-            break;
-
-            case rs::Method::PUT : 
-                router->http_put(route.path(), std::move(route));
-            break;
-
-            case rs::Method::DELETE : 
-                router->http_delete(route.path(), std::move(route));
-            break;
-
-            case rs::Method::INVALID:
-                std::cerr << "Invalid method\n";
-        }
-    }
+    router->http_get(concat(API_URL, "user"), rs::ApiHandler(rs::api_handlers::user_get));
 
     router->non_matched_request_handler(
             [](auto req){
@@ -52,11 +32,11 @@ int main()
     fmt::print("{}Server running on port {}{}{}\n", 
                   COLOR_GRN, COLOR_YEL, server_cfg.port(), COLOR_DEF);
 
-        using traits_t =
-            restinio::traits_t<
-                restinio::asio_timer_manager_t,
-                restinio::null_logger_t,
-                rs::router_t>;
+    using traits_t =
+        restinio::traits_t<
+            restinio::asio_timer_manager_t,
+            restinio::null_logger_t,
+            rs::router_t>;
 
     restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
                   .address(server_cfg.ip())

@@ -74,7 +74,7 @@ struct specialize_model
                         member(u).value(v.get<typename std::decay<decltype(member(u))>::type::inner_type>((member.name.str())));
                     //}
                 }
-            } catch (std::exception e) {
+            } catch (const std::exception &e) {
                 std::cerr << member(u).value() << std::endl;
                 std::cerr << e.what() << std::endl;
             }
