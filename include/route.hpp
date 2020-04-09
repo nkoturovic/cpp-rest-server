@@ -13,19 +13,20 @@ protected:
 private:
     Method m_method { Method::INVALID };
     std::string m_path;
-    virtual handler_t gen_callback_func_impl() const = 0;
+    virtual restinio::request_handling_status_t do_handle(restinio::request_handle_t req, restinio::router::route_params_t parms) = 0;
 public:
     virtual ~Route() = default;
+    restinio::request_handling_status_t operator()(restinio::request_handle_t, restinio::router::route_params_t);
     const std::string& path() const;
     Method method() const;
-    handler_t gen_callback_func() const;
 };
 
 class ApiRoute : public Route {
     api_handler_t m_api_handler = { nullptr };
-
-    handler_t gen_callback_func_impl() const override;
+    restinio::request_handling_status_t do_handle(restinio::request_handle_t, restinio::router::route_params_t) override;
+    inline static Shared_data *s_data = nullptr;
 public:
+    static void initialize_shared_data(Shared_data * sd);
     ApiRoute(Method method, std::string path, api_handler_t json_handler_func);
     ~ApiRoute() = default;
 };

@@ -9,9 +9,9 @@
 
 namespace rs {
 
-inline std::vector<std::shared_ptr<Route>> get_api_routes() {
+inline std::vector<ApiRoute> get_api_routes() {
     return {
-        make_shared<ApiRoute>(Method::GET, concat(API_PREFIX, R"(user)"), handlers::user::user_get)
+        ApiRoute(Method::GET, concat(API_PREFIX, R"(user)"), handlers::user::user_get)
     };
 }
 }
