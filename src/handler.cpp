@@ -1,4 +1,5 @@
 #include "handler.hpp"
+#include <3rd_party/magic_enum.hpp>
 
 namespace rs {
 
@@ -14,23 +15,61 @@ void ApiHandler::initialize_shared_data(Shared_data * sd) { ApiHandler::s_data =
 
 restinio::request_handling_status_t ApiHandler::do_handle(restinio::request_handle_t req, restinio::router::route_params_t params) {
 
-         api_handler_response_t api_response = m_api_handler(*s_data, { std::nullopt });
+        //////////// HELPER FUNCTIONS ////////////
+    auto err_func = [&req, &params](HError &&resp) {
+         json_t json;
+         json["error_id"] = magic_enum::enum_name(resp.error_id());
+         json["error_info"] = resp.extract_json();
+         return req->create_response(restinio::status_bad_gateway())
+                    .append_header(restinio::http_field::content_type, "application/problem+json")
+                    .set_body(json.dump())
+                    .done();
+    };
 
-        // TODO: Some initial checks
-        auto resp_body = std::visit(overloaded{ 
-                [](api_handler_error_t err) {
-                    return json_t { {"code", "1"}, {"message", err} }.dump();
-                },
-                [](json_t json) {
-                    return json.dump();
-                }}, api_response);
+     auto succ_func = [&req, &params](HSuccess &&resp) {
+         json_t json = resp.extract_json();
+         return req->create_response(restinio::status_ok())
+                    .append_header(restinio::http_field::content_type, "application/json")
+                    .set_body(json.dump())
+                    .done();
+    };
 
+    auto parse_json = [](auto src) {
+        if (src.empty())
+            return json_t { nullptr };
+        else
+            return nlohmann::json::parse(src);
+    };
+    //////////// END HELPER FUNCTIONS ////////////
+    //
+    json_t json_req;
+    auto req_method = req->header().method();
 
-         return req->create_response()
-        .append_header(restinio::http_field::content_type, "application/json")
-        .set_body(resp_body)
-        .done();
+    if (req_method == restinio::http_method_get()) {
+        for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
+                std::stringstream ss;
+                ss << k;
+                try {
+                    json_req[ss.str()] = std::stod(std::string(v));
+                } catch (...) {
+                    if (std::string(v) == "true") {
+                        json_req[ss.str()] = 1;
+                    } else if (std::string(v) == "false") {
+                        json_req[ss.str()] = 0;
+                    } else {
+                        json_req[ss.str()] = std::string(v);
+                    }
+                }
+        }
+    } else if (req_method == restinio::http_method_post()) {
+        try {
+            json_req = parse_json(req->body());
+        } catch (const nlohmann::json::parse_error &perror) {
+            return err_func(HError(HError::id::JsonParseError, {}));
+        }
+    }
 
+    return std::visit(overloaded { succ_func, err_func }, m_api_handler(*s_data, json_req));
 }
 
 }

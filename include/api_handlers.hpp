@@ -2,6 +2,7 @@
 
 namespace rs::api_handlers {
 
-api_handler_response_t user_get(Shared_data& data, std::optional<json_t> json_request);
+api_response_t user_get(Shared_data& data, json_t json_request);
+api_response_t user_post(Shared_data &data, json_t json_request);
 
 }

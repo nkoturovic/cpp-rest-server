@@ -5,6 +5,7 @@
 #include "typedefs.hpp"
 #include "config.hpp"
 #include "color.hpp"
+// #include "composition.hpp"
 
 #define API_URL R"(/api/)"
 #define concat(first, second) first second
@@ -19,7 +20,16 @@ int main()
     rs::ApiHandler::initialize_shared_data(&data);
     auto router = std::make_unique<rs::router_t>();
 
+    // auto insert_model_into_db<model::model Model, std::string table_name> 
+    //     = rs::assert(check_auth)
+    //     | rs::assert(check_compat(model, db, table_name))
+    //     | rs::accept_as<Model>
+    //     | rs::assert(check_constraints)
+    //     | rs::perform(db_insert)
+    //     ;
+
     router->http_get(concat(API_URL, "user"), rs::ApiHandler(rs::api_handlers::user_get));
+    router->http_post(concat(API_URL, "user"), rs::ApiHandler(rs::api_handlers::user_post));
 
     router->non_matched_request_handler(
             [](auto req){

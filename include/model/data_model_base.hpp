@@ -8,6 +8,21 @@
 #include <fmt/format.h>
 #include "model/constraint.hpp"
 #include <optional>
+#include "typedefs.hpp"
+
+#include <type_traits>
+
+template < typename Tp, typename... List >
+struct contains : std::true_type {};
+
+template < typename Tp, typename Head, typename... Rest >
+struct contains<Tp, Head, Rest...>
+: std::conditional< std::is_same<Tp, Head>::value,
+    std::true_type,
+    contains<Tp, Rest...> >::type {};
+
+template < typename Tp >
+struct contains<Tp> : std::false_type {};
 
 namespace model {
 
@@ -16,7 +31,7 @@ class Field {
     template <typename C>
     static void append_if_unsatisfied(std::vector<std::string> &vec, const T &value) {
         if (!C::satisfied(value))
-            vec.push_back(cnstr::get_description<C>().str());
+            vec.push_back(cnstr::description<C>().str());
     }
 public:
     using inner_type = T;
@@ -35,6 +50,8 @@ public:
 
         if (m_value) {
             (append_if_unsatisfied<Cs>(vec, m_value.value()), ...);
+        } else if (contains<cnstr::Required, Cs...>::value) {
+            vec.push_back(cnstr::description<cnstr::Required>().str());
         }
 
         return vec;
@@ -71,7 +88,9 @@ struct specialize_model
                     //if (member(u).has_value()) {
                         std::cout << __FUNCTION__ << " IT_HAS_VALUE" << std::endl;
                         // TODO: Mora uspeti ako smo dosli dovde
-                        member(u).value(v.get<typename std::decay<decltype(member(u))>::type::inner_type>((member.name.str())));
+                        using decayed = typename std::decay<decltype(member(u))>::type::inner_type;
+                        //print_types<decayed>{};
+                        member(u).value(v.get<decayed>((member.name.str())));
                     //}
                 }
             } catch (const std::exception &e) {
@@ -165,13 +184,13 @@ std::map<std::string, std::vector<std::string>> unsatisfied_constraints(const M&
     std::map<std::string, std::vector<std::string>> unsatisfied;
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
-            if (member(model).has_value()) {
+            //if (member(model).has_value()) {
                 if (auto && vec = member(model).check_constraints(); vec.size()) {
                     unsatisfied[member.name.str()] = std::move(vec);
                 }
-            }
+            //}
         }
-    });
+   });
     return unsatisfied;
 }
 

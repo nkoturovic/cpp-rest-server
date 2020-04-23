@@ -5,10 +5,11 @@ namespace model {
 struct User : Model {
     Integer<> id;
     Text<cnstr::Length<1,10>> username;
-    Text<> password;
-    Text<> email;
-    Text<> firstname;
-    Text<> lastname;
+    Text<cnstr::Required> password;
+    Text<cnstr::Required> email;
+    Text<cnstr::Required> firstname;
+    Text<cnstr::Required> lastname;
+    Integer<cnstr::Required> born;
     Text<> status;
 };
 

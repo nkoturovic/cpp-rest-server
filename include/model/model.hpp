@@ -8,6 +8,7 @@ REFL_AUTO(
   field(email),
   field(firstname),
   field(lastname),
+  field(born),
   field(status)
 )
 
