@@ -1,7 +1,10 @@
+#ifndef MODEL_HPP
+#define MODEL_HPP
+
 #include "data_model.hpp"
 
 REFL_AUTO(
-  type(model::User),
+  type(rs::model::User),
   field(id),
   field(username),
   field(password),
@@ -12,4 +15,6 @@ REFL_AUTO(
   field(status)
 )
 
-template <> struct soci::type_conversion<model::User> : model::specialize_model<model::User> {};
+template <> struct soci::type_conversion<rs::model::User> : rs::model::specialize_model<rs::model::User> {};
+
+#endif // MODEL_HPP

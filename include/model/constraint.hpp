@@ -1,10 +1,13 @@
+#ifndef RS_CONSTRAINT_HPP
+#define RS_CONSTRAINT_HPP
+
 #include <string_view>
 #include "3rd_party/static_string.h"
 #include <any>
 
 using namespace snw1;
 
-namespace cnstr {
+namespace rs::cnstr {
 
 template <typename T>
 using ftype = bool(*)(T);
@@ -20,6 +23,7 @@ struct Constraint {
 
 struct NotEmpty : Constraint<"NotEmpty"_ss, std::string_view, [](std::string_view s) { return s.empty(); }> {};
 struct Required : Constraint<"Required"_ss, std::any, [](std::any) { return true; }> {};
+struct Unique : Constraint<"Unique"_ss, std::any, [](std::any) { return true; }> {};
 
 // Static polymorphism for check function??
 template <unsigned from_ = 0u, unsigned to_ = from_>
@@ -63,3 +67,6 @@ constexpr static auto description() {
 }
 
 }
+
+
+#endif // RS_CONSTRAINT_HPP

@@ -1,11 +1,13 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
 #include "handler.hpp"
+#include "model/model.hpp"
 #include "api_handlers.hpp"
 #include "typedefs.hpp"
 #include "config.hpp"
 #include "color.hpp"
-// #include "composition.hpp"
+#include "composition.hpp"
+#include "actions.hpp"
 
 #define API_URL R"(/api/)"
 #define concat(first, second) first second
@@ -16,26 +18,16 @@ int main()
 {
     rs::ServerConfig server_cfg("config/server_config.json");
     soci::session db(soci::sqlite3, "dbname=ImageShare.sqlite");
-    rs::Shared_data data { db };
-    rs::ApiHandler::initialize_shared_data(&data);
     auto router = std::make_unique<rs::router_t>();
 
-    // auto insert_model_into_db<model::model Model, std::string table_name> 
-    //     = rs::assert(check_auth)
-    //     | rs::assert(check_compat(model, db, table_name))
-    //     | rs::accept_as<Model>
-    //     | rs::assert(check_constraints)
-    //     | rs::perform(db_insert)
-    //     ;
-
-    router->http_get(concat(API_URL, "user"), rs::ApiHandler(rs::api_handlers::user_get));
-    router->http_post(concat(API_URL, "user"), rs::ApiHandler(rs::api_handlers::user_post));
+    router->http_post(concat(API_URL, "user"), rs::ApiHandler(rs::actions::insert_model_into_db<rs::model::User>(db, "users")));
+    router->http_get(concat(API_URL, "user"), rs::ApiHandler(rs::actions::get_models_from_db<rs::model::User>(db, "users")));
 
     router->non_matched_request_handler(
-            [](auto req){
+            [](auto req) {
                 return req->create_response(restinio::status_not_found()).connection_close()
                 .append_header( restinio::http_field::content_type, "application/json" )
-                .set_body(R"({ "message" : "Page not found!" })")
+                .set_body(rs::ApiError(rs::ApiErrorId::NotFound).json().dump())
                 .done();
             });
 

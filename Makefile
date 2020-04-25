@@ -22,7 +22,7 @@ json_example.o: examples/json_example.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 
-main.o: src/main.cpp
+main.o: src/main.cpp include/composition.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 api_handlers.o: src/api_handlers.cpp include/handler.hpp

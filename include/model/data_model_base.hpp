@@ -1,3 +1,6 @@
+#ifndef RS_DATA_MODEL_BASE_HPP
+#define RS_DATA_MODEL_BASE_HPP
+
 #include <soci/soci.h>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -24,7 +27,7 @@ struct contains<Tp, Head, Rest...>
 template < typename Tp >
 struct contains<Tp> : std::false_type {};
 
-namespace model {
+namespace rs::model {
 
 template <typename T, typename ...Cs>
 class Field {
@@ -61,6 +64,10 @@ public:
         return m_value.has_value();
     }
 
+    bool unique() const {
+        return contains<cnstr::Unique, Cs...>::value;
+    }
+
 private:
     std::optional<T> m_value;
 };
@@ -80,22 +87,16 @@ struct specialize_model
     using base_type = soci::values;
     static void from_base(soci::values const & v, soci::indicator /* ind */, U & u)
     {
-        std::cout << __FUNCTION__ << " FROM_BASE" << std::endl;
         refl::util::for_each(refl::reflect(u).members, [&](auto member) {
             try {
                 if constexpr (refl::trait::is_field<decltype(member)>()) {
-                    std::cout << __FUNCTION__ << " IS_VALUE" << std::endl;
-                    //if (member(u).has_value()) {
-                        std::cout << __FUNCTION__ << " IT_HAS_VALUE" << std::endl;
-                        // TODO: Mora uspeti ako smo dosli dovde
-                        using decayed = typename std::decay<decltype(member(u))>::type::inner_type;
-                        //print_types<decayed>{};
-                        member(u).value(v.get<decayed>((member.name.str())));
-                    //}
+                    using decayed = typename std::decay<decltype(member(u))>::type::inner_type;
+                    member(u).value(v.get<decayed>((member.name.str())));
                 }
             } catch (const std::exception &e) {
-                std::cerr << member(u).value() << std::endl;
-                std::cerr << e.what() << std::endl;
+                // Some error (null not okay for this type ...)
+                // std::cerr << member(u).value() << std::endl;
+                // std::cerr << e.what() << std::endl;
             }
         });
     }
@@ -126,13 +127,8 @@ void to_json(nlohmann::json& j, const M& model) requires concepts::derived_from<
 {
     j = nlohmann::json{};
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-        std::cout << "converts" << std::endl;
         if constexpr (refl::trait::is_field<decltype(member)>()) {
-            std::cout << "is value" << std::endl;
             if (member(model).has_value()) {
-                std::cout << "has value" << std::endl;
-                std::cout << member(model).has_value() << std::endl;
-                std::cout << member.name.str() << std::endl;
                 j[member.name.str()] = member(model).value();
             }
         }
@@ -145,14 +141,13 @@ void from_json(const nlohmann::json& j, M& model) requires concepts::derived_fro
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
             try {
-                std::cout << "LOG" << std::endl;
                 auto tmp = j.at(member.name.str());
                 member(model).value(std::move(tmp));
-            } catch(...) {
-                std::clog << __FILE__ 
-                          << '(' << __LINE__  << ')'
-                          << ": Polje " << member.name.str() 
-                          << " nije postavljeno." << '\n';
+            } catch(const nlohmann::json::exception &e) {
+                // std::clog << __FILE__ 
+                //           << '(' << __LINE__  << ')'
+                //           << ": Polje " << member.name.str() 
+                //           << " nije postavljeno." << '\n';
             }
         }
     });
@@ -164,7 +159,27 @@ std::map<std::string,std::string> to_map(M& model) requires concepts::derived_fr
      refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
             if (member(model).has_value()) {
-                using model_inner_t = std::decay<decltype(member(model))>::type::inner_type;
+                using model_inner_t = typename std::decay<decltype(member(model))>::type::inner_type;
+                if constexpr (std::is_convertible<model_inner_t, std::string>::value) {
+                    result_map.insert( {member.name.str(), std::string(member(model).value()) } );
+                } else if (std::is_arithmetic<model_inner_t>::value) {
+                    result_map.insert( {member.name.str(), std::to_string(member(model).value()) } );
+                } else {
+                    result_map.insert( {member.name.str(), "ERROR" } );
+                }
+            }
+        }
+     });
+    return result_map;
+}
+
+template <typename M>
+std::map<std::string,std::string> unique_cnstr_fields(M& model) requires concepts::derived_from<M,Model>  {
+     std::map<std::string, std::string> result_map;
+     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+        if constexpr (refl::trait::is_field<decltype(member)>()) {
+            if (member(model).has_value() && member(model).unique()) {
+                using model_inner_t = typename std::decay<decltype(member(model))>::type::inner_type;
                 if constexpr (std::is_convertible<model_inner_t, std::string>::value) {
                     result_map.insert( {member.name.str(), std::string(member(model).value()) } );
                 } else if (std::is_arithmetic<model_inner_t>::value) {
@@ -184,14 +199,14 @@ std::map<std::string, std::vector<std::string>> unsatisfied_constraints(const M&
     std::map<std::string, std::vector<std::string>> unsatisfied;
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
-            //if (member(model).has_value()) {
-                if (auto && vec = member(model).check_constraints(); vec.size()) {
-                    unsatisfied[member.name.str()] = std::move(vec);
-                }
-            //}
-        }
+            if (auto && vec = member(model).check_constraints(); vec.size()) {
+                unsatisfied[member.name.str()] = std::move(vec);
+            }
+    }
    });
     return unsatisfied;
 }
 
 }
+
+#endif //RS_DATA_MODEL_BASE_HPP

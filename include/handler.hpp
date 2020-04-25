@@ -16,12 +16,11 @@ public:
 };
 
 class ApiHandler : public Handler {
-    api_handler_t m_api_handler = { nullptr };
+    api_handler_t m_api_handler;
     restinio::request_handling_status_t do_handle(restinio::request_handle_t, restinio::router::route_params_t) override;
-    inline static Shared_data *s_data = nullptr;
 public:
-    static void initialize_shared_data(Shared_data * sd);
-    ApiHandler(api_handler_t json_handler_func);
+    
+    ApiHandler(api_handler_t func) : m_api_handler(func) { }
     ~ApiHandler() = default;
 };
 
