@@ -47,7 +47,8 @@ auto insert_model_into_db(soci::session &db, std::string table_name) {
          | rs::transform(check_constraints<M>)
          | rs::transform([&db, &table_name](M &&m) -> M { return check_uniquenes_in_db<M>(db, table_name, std::move(m)); })
          | rs::transform([&db, &table_name](M &&m) -> rs::json_t { 
-                return rs::api_handlers::insert_model_into_db(db, table_name, std::move(m));
+                rs::api_handlers::insert_model_into_db(db, table_name, std::move(m));
+                return nullptr;
          })
          ;
 }

@@ -24,7 +24,7 @@ std::vector<M> get_models_from_db(soci::session &db, std::string table_name) {
  }
 
 template <typename M> requires concepts::derived_from<M,rs::model::Model>
-api_response_t insert_model_into_db(soci::session &db, std::string table_name, M && m) {
+void insert_model_into_db(soci::session &db, std::string table_name, M && m) {
     auto model_map = model::to_map(m);
     std::vector<std::string> keys (model_map.size());
     std::vector<std::string> values (model_map.size());
@@ -41,8 +41,6 @@ api_response_t insert_model_into_db(soci::session &db, std::string table_name, M
     });
 
     db << "INSERT INTO " << table_name << "(" << ks << ")" << " VALUES(" << vs << ")";
-
-    return {}; // success
 }
 
 }
