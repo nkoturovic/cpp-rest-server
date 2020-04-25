@@ -15,39 +15,42 @@ static json_t parse_json(auto src) {
         return nlohmann::json::parse(src);
 };
 
-restinio::request_handling_status_t ApiHandler::do_handle(restinio::request_handle_t req, restinio::router::route_params_t params) {
+static auto api_parse_query(const auto &req, const auto &params) {
+    json_t json_req;
+    auto req_method = req->header().method();
 
-    try {
-        json_t json_req;
-        auto req_method = req->header().method();
-
-        if (req_method == restinio::http_method_get()) {
-            for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
-                    std::stringstream ss;
-                    ss << k;
-                    try {
-                        json_req[ss.str()] = std::stod(std::string(v));
-                    } catch (...) {
-                        if (std::string(v) == "true") {
-                            json_req[ss.str()] = 1;
-                        } else if (std::string(v) == "false") {
-                            json_req[ss.str()] = 0;
-                        } else {
-                            json_req[ss.str()] = std::string(v);
-                        }
+    if (req_method == restinio::http_method_get()) {
+        for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
+                std::stringstream ss;
+                ss << k;
+                try {
+                    json_req[ss.str()] = std::stod(std::string(v));
+                } catch (...) {
+                    if (std::string(v) == "true") {
+                        json_req[ss.str()] = 1;
+                    } else if (std::string(v) == "false") {
+                        json_req[ss.str()] = 0;
+                    } else {
+                        json_req[ss.str()] = std::string(v);
                     }
-            }
-        } else if (req_method == restinio::http_method_post()) {
-            try {
-                json_req = parse_json(req->body());
-            } catch (const nlohmann::json::parse_error &perror) {
-                throw ApiException(ApiErrorId::JsonParseError, perror.what());
-            }
+                }
         }
+    } else /* if (req_method == restinio::http_method_post()) */ {
+        try {
+            json_req = parse_json(req->body());
+        } catch (const nlohmann::json::parse_error &perror) {
+            throw ApiException(ApiErrorId::JsonParseError, perror.what());
+        }
+    }
+    return json_req;
+}
 
+restinio::request_handling_status_t ApiHandler::do_handle(restinio::request_handle_t req, restinio::router::route_params_t params) {
+    try {
+        json_t json_req = api_parse_query(req, params);
         json_t resp_json = m_api_handler(json_req);
 
-        return req->create_response(restinio::status_ok()) // SUCCESS
+        return req->create_response(restinio::status_ok())
                    .append_header(restinio::http_field::content_type, "application/json")
                    .set_body(resp_json.dump())
                    .done();
@@ -72,6 +75,7 @@ restinio::request_handling_status_t ApiHandler::do_handle(restinio::request_hand
                 .append_header(restinio::http_field::content_type, "application/problem+json")
                 .set_body(R"({ "message" : "Internal error" })")
                 .done();
-        }
-    }
+   }
+}
+
 }
