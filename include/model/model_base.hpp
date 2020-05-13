@@ -55,7 +55,7 @@ public:
     }
 
     bool unique() const {
-        return contains<cnstr::Unique, Cs...>::value;
+        return hana::contains(cnstr_list, hana::type_c<cnstr::Unique>);
     }
 
 private:
