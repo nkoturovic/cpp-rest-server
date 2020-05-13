@@ -9,7 +9,7 @@
 
 namespace rs::api_handlers {
 
-template <typename M> requires concepts::derived_from<M,rs::model::Model>
+template <rs::model::CModel M>
 std::vector<M> get_models_from_db(soci::session &db, std::string table_name) {
         M m;
         soci::statement getUsersStmt = (db.prepare << "SELECT * FROM " << table_name, soci::into(m));
@@ -23,7 +23,7 @@ std::vector<M> get_models_from_db(soci::session &db, std::string table_name) {
         return models;
  }
 
-template <typename M> requires concepts::derived_from<M,rs::model::Model>
+template <rs::model::CModel M>
 void insert_model_into_db(soci::session &db, std::string table_name, M && m) {
     auto model_map = model::to_map(m);
     std::vector<std::string> keys (model_map.size());

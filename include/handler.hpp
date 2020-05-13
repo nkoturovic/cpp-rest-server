@@ -1,5 +1,5 @@
-#ifndef HANDLER_HPP
-#define HANDLER_HPP
+#ifndef RS_HANDLER_HPP
+#define RS_HANDLER_HPP
 
 #include "typedefs.hpp"
 
@@ -26,4 +26,4 @@ public:
 
 }
 
-#endif // HANDLER_HPP
+#endif // RS_HANDLER_HPP

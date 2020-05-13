@@ -1,46 +1,30 @@
-#ifndef RS_DATA_MODEL_BASE_HPP
-#define RS_DATA_MODEL_BASE_HPP
+#ifndef RS_MODEL_BASE_HPP
+#define RS_MODEL_BASE_HPP
 
 #include <soci/soci.h>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <utility>
 #include <concepts/concepts.hpp>
 #include <type_traits>
-#include "3rd_party/refl.hpp"
 #include <fmt/format.h>
+
+#include "3rd_party/refl.hpp"
 #include "model/constraint.hpp"
-#include <optional>
 #include "typedefs.hpp"
-
-#include <type_traits>
-
-template < typename Tp, typename... List >
-struct contains : std::true_type {};
-
-template < typename Tp, typename Head, typename... Rest >
-struct contains<Tp, Head, Rest...>
-: std::conditional< std::is_same<Tp, Head>::value,
-    std::true_type,
-    contains<Tp, Rest...> >::type {};
-
-template < typename Tp >
-struct contains<Tp> : std::false_type {};
+#include "util.hpp"
 
 namespace rs::model {
 
-template <typename T, typename ...Cs>
+template <typename T, cnstr::Cnstr ...Cs>
 class Field {
-    template <typename C>
-    static void append_if_unsatisfied(std::vector<std::string> &vec, const T &value) {
-        if (!C::satisfied(value))
-            vec.push_back(cnstr::description<C>().str());
-    }
 public:
     using inner_type = T;
+    constexpr static auto cnstr_list = hana::tuple_t<Cs...>;
 
     Field() = default;
-    Field(T value) 
+    Field(T &&value) 
         : m_value(std::forward<T>(value)) {}
 
     const T& value() const { return m_value.value(); }
@@ -48,15 +32,21 @@ public:
     void value(T&& value) { m_value = std::forward<T>(value); }
     void erase_value() { m_value = { std::nullopt }; }
 
-    std::vector<std::string> check_constraints() const { 
-        std::vector<std::string> vec;
+    template <class Func, class ... FArgs>
+    auto fmap_unsatisfied(Func && f = Func{}, FArgs&& ... fargs) const { 
+        std::vector<decltype(f.template operator()<cnstr::Required>(fargs...))> vec;
+        if (m_value) /* If value is set, check all constraints */ {
+            hana::for_each(cnstr_list, [&](auto arg) {
+                using ArgT = typename decltype(arg)::type;
+                if (!ArgT::is_satisfied(*m_value)) {
+                    vec.push_back(f.template operator()<ArgT>(fargs...));
+                }
+            });
 
-        if (m_value) {
-            (append_if_unsatisfied<Cs>(vec, m_value.value()), ...);
-        } else if (contains<cnstr::Required, Cs...>::value) {
-            vec.push_back(cnstr::description<cnstr::Required>().str());
+        } else if (hana::contains(cnstr_list, hana::type_c<cnstr::Required>)) {
+            /* value not set but cnstr::Required is in Cs... */
+            vec.push_back(f.template operator()<cnstr::Required>(fargs...));
         }
-
         return vec;
     }
 
@@ -72,20 +62,16 @@ private:
     std::optional<T> m_value;
 };
 
-template <typename ...Cs>
-using Text = Field<std::string, Cs...>;
+struct Model {};
 
-template <typename ...Cs>
-using Integer = Field<int, Cs...>;
+template<typename C>
+concept CModel = concepts::derived_from<C,Model>;
 
-struct Model {
-};
-
-template<class U> requires concepts::derived_from<U,Model> 
+template<CModel M>
 struct specialize_model
 {
     using base_type = soci::values;
-    static void from_base(soci::values const & v, soci::indicator /* ind */, U & u)
+    static void from_base(soci::values const & v, soci::indicator& /* ind */, M &u)
     {
         refl::util::for_each(refl::reflect(u).members, [&](auto member) {
             try {
@@ -100,7 +86,7 @@ struct specialize_model
             }
         });
     }
-    static void to_base(const U & u, soci::values & v, soci::indicator & ind)
+    static void to_base(const M &u, soci::values& v, soci::indicator& /* ind */)
     {
         refl::util::for_each(refl::reflect(u).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
@@ -110,8 +96,8 @@ struct specialize_model
     }
 };
 
-template <typename M>
-std::ostream& operator<<(std::ostream &out, const M &m) requires concepts::derived_from<M,Model> {
+template <CModel M>
+std::ostream& operator<<(std::ostream &out, M const& m) {
     refl::util::for_each(refl::reflect(m).members, [&](auto member) {
           if constexpr (refl::trait::is_field<decltype(member)>()) {
               if (member(m).has_value()) {
@@ -122,8 +108,8 @@ std::ostream& operator<<(std::ostream &out, const M &m) requires concepts::deriv
     return out;
 }
 
-template <typename M>
-void to_json(nlohmann::json& j, const M& model) requires concepts::derived_from<M,Model>
+template <CModel M>
+void to_json(nlohmann::json& j, const M& model)
 {
     j = nlohmann::json{};
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
@@ -135,8 +121,8 @@ void to_json(nlohmann::json& j, const M& model) requires concepts::derived_from<
     });
 }
 
-template <typename M>
-void from_json(const nlohmann::json& j, M& model) requires concepts::derived_from<M,Model> 
+template <CModel M>
+void from_json(const nlohmann::json& j, M& model)
 {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
@@ -153,8 +139,9 @@ void from_json(const nlohmann::json& j, M& model) requires concepts::derived_fro
     });
 }
 
-template <typename M>
-std::map<std::string,std::string> to_map(M& model) requires concepts::derived_from<M,Model>  {
+template <CModel M>
+std::map<std::string,std::string> to_map(M& model) 
+{
      std::map<std::string, std::string> result_map;
      refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
@@ -173,8 +160,9 @@ std::map<std::string,std::string> to_map(M& model) requires concepts::derived_fr
     return result_map;
 }
 
-template <typename M>
-std::map<std::string,std::string> unique_cnstr_fields(M& model) requires concepts::derived_from<M,Model>  {
+template <CModel M>
+std::map<std::string,std::string> unique_cnstr_fields(M& model)
+{
      std::map<std::string, std::string> result_map;
      refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
@@ -193,13 +181,13 @@ std::map<std::string,std::string> unique_cnstr_fields(M& model) requires concept
     return result_map;
 }
 
-template <typename M>
-std::map<std::string, std::vector<std::string>> unsatisfied_constraints(const M& model) requires concepts::derived_from<M,Model>
+template <CModel M, typename Func, typename ... Args>
+auto fmap_unsatisfied_cnstr(const M& model, Func &&f, Args&& ...args)
 {
-    std::map<std::string, std::vector<std::string>> unsatisfied;
+    std::map<std::string, std::vector<decltype(f.template operator()<cnstr::Required>(args...))>> unsatisfied;
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
-            if (auto && vec = member(model).check_constraints(); vec.size()) {
+            if (auto && vec = member(model).fmap_unsatisfied(f, args...); vec.size()) {
                 unsatisfied[member.name.str()] = std::move(vec);
             }
     }
@@ -209,4 +197,4 @@ std::map<std::string, std::vector<std::string>> unsatisfied_constraints(const M&
 
 }
 
-#endif //RS_DATA_MODEL_BASE_HPP
+#endif //RS_MODEL_BASE_HPP

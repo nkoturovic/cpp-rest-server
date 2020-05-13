@@ -1,21 +1,32 @@
-#ifndef ACTIONS_HPP
-#define ACTIONS_HPP
+#ifndef RS_ACTIONS_HPP
+#define RS_ACTIONS_HPP
 
 #include "model/constraint.hpp"
 #include "composition.hpp"
-#include "model/data_model_base.hpp"
+#include "model/model_base.hpp"
 #include "api_handlers.hpp"
 
 namespace rs::actions {
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 M check_constraints(const M &m) {
-    if (auto vec = model::unsatisfied_constraints(m); vec.size())
-        throw rs::ApiException(ApiErrorId::InvalidParams, vec);
+
+    //auto errs = model::fmap_unsatisfied_cnstr(m, []<cnstr::Cnstr C>() -> std::map<std::string, std::string> {
+    //    return std::map<std::string, std::string> {
+    //        { "name", cnstr::name.template operator()<C>() },
+    //        { "desc", cnstr::description.template operator()<C>() }
+    //    };
+    //});
+
+    auto errs = model::fmap_unsatisfied_cnstr(m, cnstr::description);
+
+    if (errs.size())
+        throw rs::ApiException(ApiErrorId::InvalidParams, errs);
+
     return m;
 }
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 M check_uniquenes_in_db(soci::session &db, std::string table_name, const M &m) {
     auto us = model::unique_cnstr_fields(m);
     for (const auto &[k,v] : us) {
@@ -30,18 +41,18 @@ M check_uniquenes_in_db(soci::session &db, std::string table_name, const M &m) {
 //     // ...
 // }
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 M from_request(json_t request) {
     return M(request);
 }
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 json_t from_model(M &&m) {
     return json_t(std::forward<M>(m));
 }
 
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 auto insert_model_into_db(soci::session &db, std::string table_name) {
     return rs::transform(from_request<M>)
          | rs::transform(check_constraints<M>)
@@ -53,7 +64,7 @@ auto insert_model_into_db(soci::session &db, std::string table_name) {
          ;
 }
 
-template <typename M> requires concepts::derived_from<M,model::Model>
+template <rs::model::CModel M>
 auto get_models_from_db(soci::session &db, std::string table_name) {
   return rs::transform([&db, &table_name](json_t) -> std::vector<M> { 
                 return rs::api_handlers::get_models_from_db<M>(db, table_name);

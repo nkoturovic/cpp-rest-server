@@ -1,14 +1,10 @@
-#ifndef UTIL_HPP
-#define UTIL_HPP
+#ifndef RS_TYPEDEFS_HPP
+#define RS_TYPEDEFS_HPP
 
-#include <variant>
 #include <restinio/all.hpp>
 #include <nlohmann/json.hpp>
 #include <soci/soci.h>
 #include "3rd_party/magic_enum.hpp"
-
-// template <typename... Ts>
-// struct print_types;
 
 namespace rs {
 
@@ -28,10 +24,10 @@ enum class ApiErrorId {
     DBError 
 };
 
-inline const char * msgFromApiErrorId(ApiErrorId id) {
+constexpr inline const char * msgFromApiErrorId(ApiErrorId id) {
     switch(id) {
         case ApiErrorId::InvalidParams : return "Invalid parameters";
-        case ApiErrorId::JsonParseError : return "Error while parsing request JSON";
+        case ApiErrorId::JsonParseError : return "Error while parsing JSON request";
         case ApiErrorId::DBError : return "Error with db query";
         case ApiErrorId::NotFound : return "Api Request not Found";
         default : return "Other error";

@@ -8,18 +8,11 @@ restinio::request_handling_status_t Handler::operator()(restinio::request_handle
     return do_handle(std::move(req), std::move(params));
 }
 
-static json_t parse_json(auto src) {
-    if (src.empty())
-        return json_t { nullptr };
-    else
-        return nlohmann::json::parse(src);
-};
-
-static auto api_parse_query(const auto &req, const auto &params) {
-    json_t json_req;
+static auto api_parse_query(const auto &req, [[ maybe_unused ]] const auto &params) {
     auto req_method = req->header().method();
 
     if (req_method == restinio::http_method_get()) {
+        json_t json_req;
         for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
                 std::stringstream ss;
                 ss << k;
@@ -35,14 +28,19 @@ static auto api_parse_query(const auto &req, const auto &params) {
                     }
                 }
         }
+        return json_req;
     } else /* if (req_method == restinio::http_method_post()) */ {
         try {
-            json_req = parse_json(req->body());
+            auto src = req->body();
+            if (src.empty())
+                return json_t{ nullptr };
+            else
+                return nlohmann::json::parse(src);
+
         } catch (const nlohmann::json::parse_error &perror) {
             throw ApiException(ApiErrorId::JsonParseError, perror.what());
         }
     }
-    return json_req;
 }
 
 restinio::request_handling_status_t ApiHandler::do_handle(restinio::request_handle_t req, restinio::router::route_params_t params) {

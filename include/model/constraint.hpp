@@ -1,72 +1,157 @@
-#ifndef RS_CONSTRAINT_HPP
-#define RS_CONSTRAINT_HPP
+#ifndef CNSTR_HPP
+#define CNSTR_HPP
 
+#include <type_traits>
 #include <string_view>
-#include "3rd_party/static_string.h"
 #include <any>
+#include <concepts/concepts.hpp>
 
-using namespace snw1;
+#include <boost/hana.hpp>
+namespace hana = boost::hana;
 
-namespace rs::cnstr {
+namespace cnstr {
 
-template <typename T>
-using ftype = bool(*)(T);
+/* Compile type concept (trait) for what is Constraint */
+template<typename C>
+concept Cnstr = requires(typename C::inner_type t) {
+    { C::is_satisfied(t) } -> concepts::same_as<bool>;
+    { C::name() } -> concepts::same_as<const char *>;
+    { C::description_en() } -> concepts::same_as<std::string>;
+    { C::description_rs() } -> concepts::same_as<std::string>;
+};
 
-template <auto cstr, typename T, ftype<T> cnstr_func>
-struct Constraint {
-    //constexpr static auto id = id_;
-    constexpr static auto name = cstr;
-    constexpr static bool satisfied(const T& t) { 
-            return cnstr_func(t); 
+/* --------- Constraints --------- */
+struct Required {
+    using inner_type = std::any;
+    Required() = delete;
+
+    static bool is_satisfied(const std::any &a) { return a.has_value(); } 
+
+    constexpr static const char * name() {
+        return "Required";
+    }
+
+    static std::string description_en() {
+        return "Field is Required";
+    }
+
+    static std::string description_rs() {
+        return "Polje je obavezno";
     }
 };
 
-struct NotEmpty : Constraint<"NotEmpty"_ss, std::string_view, [](std::string_view s) { return s.empty(); }> {};
-struct Required : Constraint<"Required"_ss, std::any, [](std::any) { return true; }> {};
-struct Unique : Constraint<"Unique"_ss, std::any, [](std::any) { return true; }> {};
+struct Unique {
+    using inner_type = std::any;
+    static bool is_satisfied(const std::any &) { 
+        return true; 
+    }
 
-// Static polymorphism for check function??
-template <unsigned from_ = 0u, unsigned to_ = from_>
-struct Length : 
-    Constraint<"Length"_ss,
-              std::string_view, 
-              [](std::string_view s) {
-                  if ((s.length() < from_) || (s.length() > to_))
-                      return false;
-                  else
-                      return true;
-              }> 
-{
-    constexpr static unsigned from = from_;
-    constexpr static unsigned to = to_;
+   constexpr static const char * name() {
+        return "Unique";
+    }
+   static std::string description_en() {
+        return "Not available";
+   }
+
+   static std::string description_rs() {
+        return "Zauzeto";
+    }
+};
+/* ------------ String ----------- */
+struct NotEmpty {
+    using inner_type = std::string_view;
+    NotEmpty() = delete;
+
+    constexpr static bool is_satisfied(std::string_view s) { return !s.empty(); } 
+    constexpr static const char * name() { return "NotEmpty"; }
+
+    static std::string description_en() {
+        return "Field must not be empty";
+    }
+    static std::string description_rs() {
+        return "Polje ne sme biti prazno";
+    }
+
 };
 
-template <typename T, auto lang = "en"_ss>
-constexpr static auto description() {
-    if constexpr (lang == "rs"_ss) {
-        if constexpr (T::name == Length<>::name) {
-            return "Dužina mora biti između " + UTOSS(T::from) + " i " + UTOSS(T::to) + " karaktera";
-        } else if constexpr (T::name == NotEmpty::name) {
-            return "Polje ne sme biti prazno"_ss;
-        } else if constexpr (T::name == Required::name) {
-            return "Polje je obavezno"_ss;
-        } else {
-            return "Nepoznato"_ss;
-        }
-    } else /* if constexpr (lang == "en"_ss) */ {
-        if constexpr (T::name == Length<>::name) {
-            return "Length must be between " + UTOSS(T::from) + " and " + UTOSS(T::to) + " characters";
-        } else if constexpr (T::name == NotEmpty::name) {
-            return "Field can not be empty"_ss;
-        } else if constexpr (T::name == Required::name) {
-            return "Polje je obavezno"_ss;
-        } else {
-            return "Unknown"_ss;
-        }
+template<int from_ = 0, int to_ = from_>
+struct Length { 
+    using inner_type = std::string_view;
+    Length() = delete;
+
+    constexpr static int from = from_;
+    constexpr static int to = to_;
+
+    constexpr static bool is_satisfied(std::string_view s) {
+        if ((s.length() < from) || (s.length() > to))
+            return false;
+        else
+            return true;
     }
-}
+    constexpr static const char * name() { return "Length"; }
+
+    static std::string description_en() {
+        return std::string{"Length should be between "}
+             + std::to_string(from)
+             + std::string{" and "}
+             + std::to_string(to)
+             + std::string{" charecters"};
+    }
+    static std::string description_rs() {
+        return std::string{"Duzina mora da bude izmedju "}
+             + std::to_string(from)
+             + std::string{" i "}
+             + std::to_string(to)
+             + std::string{" karaktera"};
+    }
+};
+
+/* ------------ Int ----------- */
+template<int from_ = 0, int to_ = from_>
+struct Between { 
+    using inner_type = int;
+    Between() = delete;
+
+    constexpr static int from = from_;
+    constexpr static int to = to_;
+
+    constexpr static bool is_satisfied(int x) {
+        if ((x < from) || (x > to))
+            return false;
+        else 
+            return true;
+    }
+
+    constexpr static const char * name() { return "Between"; }
+
+    static std::string description_en() {
+        return std::string{"Value should in range "}
+             + std::to_string(from)
+             + std::string{" to "}
+             + std::to_string(to);
+    }
+
+    static std::string description_rs() {
+        return std::string{"Vrednost treba da bude u opsegu od "}
+             + std::to_string(from)
+             + std::string{" do "}
+             + std::to_string(to);
+    }
+
+};
+
+constexpr auto description = []<Cnstr C>(std::string_view lang = "en") -> std::string {
+    if (lang == "rs") {
+        return C::description_rs();
+    } else /* if lang en */ {
+        return C::description_en();
+    }
+};
+
+constexpr auto name = []<Cnstr C>() -> const char * {
+        return C::name();
+};
 
 }
 
-
-#endif // RS_CONSTRAINT_HPP
+#endif // CNSTR_HPP

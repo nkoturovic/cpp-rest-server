@@ -1,0 +1,34 @@
+/* Bellow are functions that operate on constraints 
+ * these functions could have been member functions,
+ * but this way is more modular */
+
+// WRAP FOR HANA MAYBE ??????
+// auto wrap_for_hana(auto &&f) {
+//     return [&f](auto x) {
+//          using T = typename decltype(x)::type;
+//          return f.template operator()<T>();
+//     };
+// }
+// 
+// auto tf = hana::transform(x.username.cnstr_list, cnstr::wrap_for_hana(cnstr::description));
+//     hana::for_each(tf, [](auto x) {
+//         std::cout << x << '\n';
+//     });
+
+//template <Cnstr C>
+//constexpr auto name() -> const char * {
+//constexpr auto name = []<Cnstr C>() -> const char * {
+//    if constexpr (std::is_same_v<NotEmpty, C>) {
+//        return "NotEmpty";
+//    } else if constexpr (is_specialization_num<C, Length>::value) {
+//        return "Length";
+//    } else if constexpr (is_specialization_num<C, Between>::value) {
+//        return "Between";
+//    } else if constexpr (std::is_same_v<Required, C>) {
+//        return "Required";
+//    } else {
+//        return "Other";
+//    }
+//};
+//
+
