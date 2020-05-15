@@ -1,12 +1,12 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
+
 #include "handler.hpp"
-#include "model/model.hpp"
+#include "model/models.hpp"
 #include "api_handlers.hpp"
 #include "typedefs.hpp"
 #include "config.hpp"
 #include "color.hpp"
-#include "composition.hpp"
 #include "actions.hpp"
 
 #define API_URL R"(/api/)"
@@ -17,7 +17,7 @@ using namespace restinio;
 int main() 
 {
     rs::ServerConfig server_cfg("config/server_config.json");
-    soci::session db(soci::sqlite3, "dbname=ImageShare.sqlite");
+    soci::session db(soci::sqlite3, "dbname=db.sqlite");
     auto router = std::make_unique<rs::router_t>();
 
     router->http_post(concat(API_URL, "user"), rs::ApiHandler(rs::actions::insert_model_into_db<rs::model::User>(db, "users")));

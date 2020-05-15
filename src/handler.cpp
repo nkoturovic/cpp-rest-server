@@ -1,6 +1,6 @@
 #include "handler.hpp"
-#include <soci/sqlite3/soci-sqlite3.h>
-#include <3rd_party/magic_enum.hpp>
+#include "soci/sqlite3/soci-sqlite3.h"
+#include "3rd_party/magic_enum.hpp"
 
 namespace rs {
 

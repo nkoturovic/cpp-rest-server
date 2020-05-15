@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <string_view>
 #include <any>
-#include <concepts/concepts.hpp>
+#include <concepts>
 
 #include <boost/hana.hpp>
 namespace hana = boost::hana;
@@ -14,10 +14,10 @@ namespace cnstr {
 /* Compile type concept (trait) for what is Constraint */
 template<typename C>
 concept Cnstr = requires(typename C::inner_type t) {
-    { C::is_satisfied(t) } -> concepts::same_as<bool>;
-    { C::name() } -> concepts::same_as<const char *>;
-    { C::description_en() } -> concepts::same_as<std::string>;
-    { C::description_rs() } -> concepts::same_as<std::string>;
+    { C::is_satisfied(t) } -> std::same_as<bool>;
+    { C::name() } -> std::same_as<const char *>;
+    { C::description_en() } -> std::same_as<std::string>;
+    { C::description_rs() } -> std::same_as<std::string>;
 };
 
 /* --------- Constraints --------- */

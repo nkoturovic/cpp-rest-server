@@ -3,7 +3,7 @@
 
 #include "model/constraint.hpp"
 #include "composition.hpp"
-#include "model/model_base.hpp"
+#include "model/model.hpp"
 #include "api_handlers.hpp"
 
 namespace rs::actions {
@@ -11,14 +11,15 @@ namespace rs::actions {
 template <rs::model::CModel M>
 M check_constraints(const M &m) {
 
-    //auto errs = model::fmap_unsatisfied_cnstr(m, []<cnstr::Cnstr C>() -> std::map<std::string, std::string> {
+    //auto errs = model::apply_to_unsatisfied_cnstrs_of_model(m, []<cnstr::Cnstr C>() 
+    // -> std::map<std::string, std::string> {
     //    return std::map<std::string, std::string> {
     //        { "name", cnstr::name.template operator()<C>() },
     //        { "desc", cnstr::description.template operator()<C>() }
     //    };
     //});
 
-    auto errs = model::fmap_unsatisfied_cnstr(m, cnstr::description);
+    auto errs = model::apply_to_unsatisfied_cnstrs_of_model(m, cnstr::description);
 
     if (errs.size())
         throw rs::ApiException(ApiErrorId::InvalidParams, errs);
@@ -36,10 +37,6 @@ M check_uniquenes_in_db(soci::session &db, std::string table_name, const M &m) {
     }
     return m;
 }
-
-// auto check_auth() {
-//     // ...
-// }
 
 template <rs::model::CModel M>
 M from_request(json_t request) {
@@ -74,6 +71,9 @@ auto get_models_from_db(soci::session &db, std::string table_name) {
          })
          ;
 }
+
+
+// TODO: auto check_auth();
 
 }
 
