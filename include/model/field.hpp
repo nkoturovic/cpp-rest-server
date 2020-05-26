@@ -9,21 +9,21 @@
 template <typename T, cnstr::Cnstr ...Cs>
 class Field {
 public:
-    using inner_type = T;
+    using value_type = T;
     constexpr static auto cnstr_list = hana::tuple_t<Cs...>;
 
     Field() = default;
     Field(T &&value) 
-        : m_value(std::forward<T>(value)) {}
+        : m_value(std::move(value)) {}
 
     const T& value() const { return m_value.value(); }
+    void set_value(T&& value) { m_value = std::move(value); }
     T&& move_value() { return std::move(*m_value); }
-    void value(T&& value) { m_value = std::forward<T>(value); }
     void erase_value() { m_value = { std::nullopt }; }
 
     template <class Func, class ... FArgs>
     auto apply_to_unsatisfied_cnstrs(Func && f = Func{}, FArgs&& ... fargs) const { 
-        std::vector<decltype(f.template operator()<cnstr::Required>(fargs...))> vec;
+        std::vector<decltype(f.template operator()<cnstr::Void>(fargs...))> vec;
         if (m_value) /* If value is set, check all constraints */ {
             hana::for_each(cnstr_list, [&](auto arg) {
                 using ArgT = typename decltype(arg)::type;

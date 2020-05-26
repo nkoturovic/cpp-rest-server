@@ -19,9 +19,9 @@ static auto api_parse_query(const auto &req, [[ maybe_unused ]] const auto &para
                 try {
                     json_req[ss.str()] = std::stod(std::string(v));
                 } catch (...) {
-                    if (std::string(v) == "true") {
+                    if (std::string_view(v) == "true") {
                         json_req[ss.str()] = 1;
-                    } else if (std::string(v) == "false") {
+                    } else if (std::string_view(v) == "false") {
                         json_req[ss.str()] = 0;
                     } else {
                         json_req[ss.str()] = std::string(v);

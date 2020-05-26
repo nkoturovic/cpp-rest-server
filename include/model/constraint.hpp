@@ -6,6 +6,8 @@
 #include <any>
 #include <concepts>
 
+#include <fmt/compile.h>
+
 #include <boost/hana.hpp>
 namespace hana = boost::hana;
 
@@ -13,7 +15,7 @@ namespace cnstr {
 
 /* Compile type concept (trait) for what is Constraint */
 template<typename C>
-concept Cnstr = requires(typename C::inner_type t) {
+concept Cnstr = requires(typename C::value_type t) {
     { C::is_satisfied(t) } -> std::same_as<bool>;
     { C::name() } -> std::same_as<const char *>;
     { C::description_en() } -> std::same_as<std::string>;
@@ -21,8 +23,26 @@ concept Cnstr = requires(typename C::inner_type t) {
 };
 
 /* --------- Constraints --------- */
+struct Void {
+    using value_type = std::any;
+    Void() = delete;
+
+    static bool is_satisfied(const std::any &) { return true; }
+
+    constexpr static const char * name() {
+        return "Void";
+    }
+    static std::string description_en() {
+        return "Void Constraint";
+    }
+    static std::string description_rs() {
+        return "Void Constraint";
+    }
+};
+
+
 struct Required {
-    using inner_type = std::any;
+    using value_type = std::any;
     Required() = delete;
 
     static bool is_satisfied(const std::any &a) { return a.has_value(); } 
@@ -41,7 +61,7 @@ struct Required {
 };
 
 struct Unique {
-    using inner_type = std::any;
+    using value_type = std::any;
     static bool is_satisfied(const std::any &) { 
         return true; 
     }
@@ -59,7 +79,7 @@ struct Unique {
 };
 /* ------------ String ----------- */
 struct NotEmpty {
-    using inner_type = std::string_view;
+    using value_type = std::string_view;
     NotEmpty() = delete;
 
     constexpr static bool is_satisfied(std::string_view s) { return !s.empty(); } 
@@ -76,66 +96,46 @@ struct NotEmpty {
 
 template<int from_ = 0, int to_ = from_>
 struct Length { 
-    using inner_type = std::string_view;
+    using value_type = std::string_view;
     Length() = delete;
 
     constexpr static int from = from_;
     constexpr static int to = to_;
 
     constexpr static bool is_satisfied(std::string_view s) {
-        if ((s.length() < from) || (s.length() > to))
-            return false;
-        else
-            return true;
+        return (s.length() >= from) && (s.length() <= to);
     }
     constexpr static const char * name() { return "Length"; }
 
     static std::string description_en() {
-        return std::string{"Length should be between "}
-             + std::to_string(from)
-             + std::string{" and "}
-             + std::to_string(to)
-             + std::string{" charecters"};
+        return fmt::format("Length should be between {} and {} characters", from, to);
     }
     static std::string description_rs() {
-        return std::string{"Duzina mora da bude izmedju "}
-             + std::to_string(from)
-             + std::string{" i "}
-             + std::to_string(to)
-             + std::string{" karaktera"};
+        return fmt::format("Duzina mora da bude izmedju {} i {} karaktera", from, to);
     }
 };
 
 /* ------------ Int ----------- */
 template<int from_ = 0, int to_ = from_>
 struct Between { 
-    using inner_type = int;
+    using value_type = int;
     Between() = delete;
 
     constexpr static int from = from_;
     constexpr static int to = to_;
 
     constexpr static bool is_satisfied(int x) {
-        if ((x < from) || (x > to))
-            return false;
-        else 
-            return true;
+        return (x >= from) && (x <= to);
     }
 
     constexpr static const char * name() { return "Between"; }
 
     static std::string description_en() {
-        return std::string{"Value should in range "}
-             + std::to_string(from)
-             + std::string{" to "}
-             + std::to_string(to);
+        return fmt::format("Value should be in range {} to {}", from, to);
     }
 
     static std::string description_rs() {
-        return std::string{"Vrednost treba da bude u opsegu od "}
-             + std::to_string(from)
-             + std::string{" do "}
-             + std::to_string(to);
+        return fmt::format("Vrednost treba da bude u opsegu od {} do {}", from, to);
     }
 
 };
@@ -151,6 +151,28 @@ constexpr auto description = []<Cnstr C>(std::string_view lang = "en") -> std::s
 constexpr auto name = []<Cnstr C>() -> const char * {
         return C::name();
 };
+
+/* Maybe change to struct with operator() */
+// struct nameT {
+//     template <Cnstr C>
+//     auto operator()() const {
+//         return C::name();
+//     }
+// };
+// 
+// struct descriptionT {
+//     template <Cnstr C>
+//     auto operator()(std::string_view lang = "en") const {
+//         if (lang == "rs") {
+//             return C::description_rs();
+//         } else /* if lang en */ {
+//             return C::description_en();
+//         }
+//     }
+// };
+// 
+// constexpr auto name = nameT{};
+// constexpr auto description = descriptionT{};
 
 }
 
