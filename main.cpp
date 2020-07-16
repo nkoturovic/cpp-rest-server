@@ -3,14 +3,11 @@
 
 #include "handler.hpp"
 #include "model/models.hpp"
-#include "api_handlers.hpp"
+#include "handlers.hpp"
 #include "typedefs.hpp"
 #include "config.hpp"
 #include "color.hpp"
 #include "actions.hpp"
-
-#define API_URL R"(/api/)"
-#define concat(first, second) first second
 
 using namespace restinio;
 
@@ -20,8 +17,15 @@ int main()
     soci::session db(soci::sqlite3, "dbname=db.sqlite");
     auto router = std::make_unique<rs::router_t>();
 
-    router->http_post(concat(API_URL, "user"), rs::ApiHandler(rs::actions::insert_model_into_db<rs::model::User>(db, "users")));
-    router->http_get(concat(API_URL, "user"), rs::ApiHandler(rs::actions::get_models_from_db<rs::model::User>(db, "users")));
+    router->http_post(rs::epr::path_to_params("/api/user"), 
+            rs::ApiHandler<>(rs::handlers::insert_model_into_db<rs::model::User>(db, "users")));
+
+    router->http_get(rs::epr::path_to_params("/api/user"),
+            rs::ApiHandler<>(rs::handlers::get_models_from_db<rs::model::User>(db, "users")));
+
+   router->http_get(rs::epr::path_to_params("/api/user/", 
+           rs::epr::non_negative_decimal_number_p<std::uint64_t>()),
+           rs::ApiHandler<std::uint64_t>(rs::handlers::get_user_by_id(db)));
 
     router->non_matched_request_handler(
             [](auto req) {

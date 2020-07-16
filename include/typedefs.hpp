@@ -2,6 +2,7 @@
 #define RS_TYPEDEFS_HPP
 
 #include <restinio/all.hpp>
+#include <restinio/router/easy_parser_router.hpp>
 #include <nlohmann/json.hpp>
 #include <soci/soci.h>
 #include "3rd_party/magic_enum.hpp"
@@ -10,11 +11,12 @@ namespace rs {
 
 using json_t = nlohmann::json;
 
-using router_t = restinio::router::express_router_t<>;
-using handler_t = restinio::router::express_request_handler_t;
+namespace epr = restinio::router::easy_parser_router;
+using router_t = restinio::router::easy_parser_router_t;
+//using handler_t = restinio::router::express_request_handler_t;
 using api_response_t = json_t;
-
-using api_handler_t = std::function<api_response_t(json_t)>;
+template <typename ...Args>
+using api_handler_t = std::function<api_response_t(json_t,Args...)>;
 
 enum class ApiErrorId { 
     Other,

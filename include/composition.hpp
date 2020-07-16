@@ -20,7 +20,7 @@ struct trafo_helper {
   Trafo trafo;
   // umesto ovog je funkcija ispod
   template <typename ... Args>
-  auto operator()(Args&& ...args) { return trafo(std::forward<Args...>(args)...); }
+  auto operator()(const Args& ...args) const { return trafo(args...); }
 };
 
 template <typename Trafo>

@@ -1,34 +1,15 @@
 #ifndef RS_ACTIONS_HPP
 #define RS_ACTIONS_HPP
 
-#include "model/constraint.hpp"
-#include "composition.hpp"
+#include "typedefs.hpp"
 #include "model/model.hpp"
-#include "api_handlers.hpp"
+#include <sstream>
+#include <map>
 
 namespace rs::actions {
 
 template <rs::model::CModel M>
-M check_constraints(const M &m) {
-
-    //auto errs = model::apply_to_unsatisfied_cnstrs_of_model(m, []<cnstr::Cnstr C>() 
-    // -> std::map<std::string, std::string> {
-    //    return std::map<std::string, std::string> {
-    //        { "name", cnstr::name.template operator()<C>() },
-    //        { "desc", cnstr::description.template operator()<C>() }
-    //    };
-    //});
-
-    auto errs = model::apply_to_unsatisfied_cnstrs_of_model(m, cnstr::description);
-
-    if (errs.size())
-        throw rs::ApiException(ApiErrorId::InvalidParams, errs);
-
-    return m;
-}
-
-template <rs::model::CModel M>
-M check_uniquenes_in_db(soci::session &db, std::string table_name, const M &m) {
+constexpr M check_uniquenes_in_db(soci::session &db, std::string_view table_name, const M &m) {
     auto us = model::unique_cnstr_fields(m);
     for (const auto &[k,v] : us) {
          int count = 0;
@@ -39,42 +20,46 @@ M check_uniquenes_in_db(soci::session &db, std::string table_name, const M &m) {
 }
 
 template <rs::model::CModel M>
-M from_request(json_t request) {
-    return M(request);
+std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name, std::string_view filter = "") {
+    M m;
+
+    std::string filterStmt = "";
+
+    if (filter.size())
+        filterStmt.append(" WHERE ").append(filter);
+
+    soci::statement getModelsStmt = (db.prepare << "SELECT * FROM " << table_name << filterStmt, soci::into(m));
+    getModelsStmt.execute();
+
+    std::vector<M> models;
+
+    while (getModelsStmt.fetch()) {
+        models.push_back(m);
+    }
+
+    return models;
 }
 
 template <rs::model::CModel M>
-json_t from_model(M &&m) {
-    return json_t(std::forward<M>(m));
+void insert_model_into_db(soci::session &db, std::string_view table_name, M && m) {
+    auto model_map = model::to_map(m);
+    std::vector<std::string> keys (model_map.size());
+    std::vector<std::string> values (model_map.size());
+
+    std::transform(model_map.begin(), model_map.end(), keys.begin(), [](const auto &m) { return m.first; });
+    std::transform(model_map.begin(), model_map.end(), values.begin(), [](const auto &m) { return m.second; });
+
+    std::string ks = std::accumulate(keys.begin(), keys.end(), std::string{}, [](std::string s1, std::string s2) { 
+            return std::move(s1) + (s1 != "" ? ", " : "") + std::move(s2);
+    });
+
+    std::string vs = std::accumulate(values.begin(), values.end(), std::string{}, [](std::string s1, std::string s2) { 
+            return std::move(s1) + (s1 != "" ? ", " : "")  + "\"" + std::move(s2) + "\"";
+    });
+
+    db << "INSERT INTO " << table_name << "(" << ks << ")" << " VALUES(" << vs << ")";
 }
-
-
-template <rs::model::CModel M>
-auto insert_model_into_db(soci::session &db, std::string table_name) {
-    return rs::transform(from_request<M>)
-         | rs::transform(check_constraints<M>)
-         | rs::transform([&db, &table_name](M &&m) -> M { return check_uniquenes_in_db<M>(db, table_name, std::move(m)); })
-         | rs::transform([&db, &table_name](M &&m) -> rs::json_t { 
-                rs::api_handlers::insert_model_into_db(db, table_name, std::move(m));
-                return nullptr;
-         })
-         ;
-}
-
-template <rs::model::CModel M>
-auto get_models_from_db(soci::session &db, std::string table_name) {
-  return rs::transform([&db, &table_name](json_t) -> std::vector<M> { 
-                return rs::api_handlers::get_models_from_db<M>(db, table_name);
-         })
-         | rs::transform([](std::vector<M> &&v) { 
-                 return json_t(std::move(v));
-         })
-         ;
-}
-
-
-// TODO: auto check_auth();
 
 }
 
-#endif
+#endif // RS_ACTIONS_HPP
