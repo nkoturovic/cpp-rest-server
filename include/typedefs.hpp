@@ -18,6 +18,14 @@ using api_response_t = json_t;
 template <typename ...Args>
 using api_handler_t = std::function<api_response_t(json_t,Args...)>;
 
+json_t success_response(std::string_view info = "") {
+    json_t json;
+    json["message"] = "OK";
+    if (!info.empty())
+        json["info"] = info;
+    return json;
+};
+
 enum class ApiErrorId { 
     Other,
     InvalidParams,

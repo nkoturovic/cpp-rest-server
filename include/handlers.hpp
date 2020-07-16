@@ -48,7 +48,7 @@ constexpr auto insert_model_into_db(soci::session &db, std::string_view table_na
          | rs::transform([&db, table_name](M &&m) -> M { return actions::check_uniquenes_in_db<M>(db, table_name, std::move(m)); })
          | rs::transform([&db, table_name](M &&m) -> rs::json_t { 
                 rs::actions::insert_model_into_db(db, std::move(table_name), std::move(m));
-                return nullptr;
+                return success_response("Model successfully inserted into db"); 
          })
          ;
 }
