@@ -18,14 +18,14 @@ int main()
     auto router = std::make_unique<rs::router_t>();
 
     router->http_post(rs::epr::path_to_params("/api/user"), 
-            rs::ApiHandler<>(rs::handlers::insert_model_into_db<rs::model::User>(db, "users")));
+            rs::ApiHandler<rs::model::User>(rs::handlers::insert_model_into_db<rs::model::User>(db, "users")));
 
     router->http_get(rs::epr::path_to_params("/api/user"),
-            rs::ApiHandler<>(rs::handlers::get_models_from_db<rs::model::User>(db, "users")));
+            rs::ApiHandler<rs::unit>(rs::handlers::get_models_from_db<rs::model::User>(db, "users")));
 
    router->http_get(rs::epr::path_to_params("/api/user/", 
            rs::epr::non_negative_decimal_number_p<std::uint64_t>()),
-           rs::ApiHandler<std::uint64_t>(rs::handlers::get_user_by_id(db)));
+           rs::ApiHandler<rs::handler_params::HPars_get_model_by_id, std::uint64_t>(rs::handlers::get_user_by_id(db)));
 
     router->non_matched_request_handler(
             [](auto req) {

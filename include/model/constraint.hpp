@@ -52,11 +52,11 @@ struct Required {
     }
 
     static std::string description_en() {
-        return "Field is Required";
+        return "Field should not be empty or invalid";
     }
 
     static std::string description_rs() {
-        return "Polje je obavezno";
+        return "Polje ne sme biti prazno ili nevalidno";
     }
 };
 

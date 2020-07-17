@@ -5,9 +5,29 @@
 #include <restinio/router/easy_parser_router.hpp>
 #include <nlohmann/json.hpp>
 #include <soci/soci.h>
+#include <boost/lexical_cast.hpp>// for lexical_cast() 
 #include "3rd_party/magic_enum.hpp"
 
+/* Fix cast true -> 1 and false -> 0 */
+namespace boost {
+    template<> 
+    bool lexical_cast<bool, std::string>(const std::string& arg) {
+        std::istringstream ss(arg);
+        bool b;
+        ss >> std::boolalpha >> b;
+        return b;
+    }
+
+    template<>
+    std::string lexical_cast<std::string, bool>(const bool& b) {
+        std::ostringstream ss;
+        ss << std::boolalpha << b;
+        return ss.str();
+    }
+}
+
 namespace rs {
+struct unit {};
 
 using json_t = nlohmann::json;
 
@@ -15,8 +35,9 @@ namespace epr = restinio::router::easy_parser_router;
 using router_t = restinio::router::easy_parser_router_t;
 //using handler_t = restinio::router::express_request_handler_t;
 using api_response_t = json_t;
-template <typename ...Args>
-using api_handler_t = std::function<api_response_t(json_t,Args...)>;
+
+template <class JParams, typename...RouteParams>
+using api_handler_t = std::function<api_response_t(JParams, RouteParams...)>;
 
 json_t success_response(std::string_view info = "") {
     json_t json;

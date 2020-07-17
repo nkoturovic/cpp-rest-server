@@ -15,6 +15,7 @@ struct User : Model {
     Field<int, cnstr::Required> born;
     Field<std::string> status;
 };
+
 }
 
 /* Required for REFLECTION!! */
@@ -29,6 +30,8 @@ REFL_AUTO(
   field(born),
   field(status)
 )
+
+
 
 /* Required to enable automatic reading from sql to model and from model to sql */
 template <> struct soci::type_conversion<rs::model::User> : rs::model::specialize_model<rs::model::User> {};

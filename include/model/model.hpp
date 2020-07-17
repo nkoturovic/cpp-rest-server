@@ -79,14 +79,22 @@ void from_json(const nlohmann::json& j, M& model)
 {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
+            using field_type = typename std::remove_cvref_t<decltype(member(model))>::value_type;
             try {
                 auto tmp = j.at(member.name.str());
-                member(model).set_value(std::move(tmp));
-            } catch(const nlohmann::json::exception &e) {
-                // std::clog << __FILE__ 
-                //           << '(' << __LINE__  << ')'
-                //           << ": Polje " << member.name.str() 
-                //           << " nije postavljeno." << '\n';
+                if (!tmp.empty()) {
+                    if (!tmp.is_string() || std::is_convertible_v<field_type, std::string>) {
+                        member(model).set_value(tmp);
+                    } else /* if tmp is string and field_type not conv. to string */ {
+                        field_type ftmp = boost::lexical_cast<field_type>(tmp.template get<std::string>()); 
+                        member(model).set_value(std::move(ftmp));
+                    }
+                }
+            } catch(...) {
+                    // std::clog << __FILE__ 
+                        //           << '(' << __LINE__  << ')'
+                        //           << ": Polje " << member.name.str() 
+                        //           << " nije postavljeno." << '\n';
             }
         }
     });

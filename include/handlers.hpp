@@ -1,9 +1,9 @@
 #ifndef RS_HANDLERS_HPP
 #define RS_HANDLERS_HPP
 
+#include "handler_params.hpp"
 #include "model/constraint.hpp"
 #include "composition.hpp"
-#include "model/models.hpp"
 #include "actions.hpp"
 
 namespace rs::helper {
@@ -43,8 +43,7 @@ namespace rs::handlers {
 
 template <rs::model::CModel M>
 constexpr auto insert_model_into_db(soci::session &db, std::string_view table_name) {
-    return rs::transform(helper::to_model<M>)
-         | rs::transform(helper::check_constraints<M>)
+    return rs::transform(helper::check_constraints<M>)
          | rs::transform([&db, table_name](M &&m) -> M { return actions::check_uniquenes_in_db<M>(db, table_name, std::move(m)); })
          | rs::transform([&db, table_name](M &&m) -> rs::json_t { 
                 rs::actions::insert_model_into_db(db, std::move(table_name), std::move(m));
@@ -53,9 +52,10 @@ constexpr auto insert_model_into_db(soci::session &db, std::string_view table_na
          ;
 }
 
+
 template <rs::model::CModel M>
 constexpr auto get_models_from_db(soci::session &db, std::string_view table_name, std::string_view filter = "") {
-      return rs::transform([&db, table_name, filter](json_t) -> std::vector<M> { 
+      return rs::transform([&db, table_name, filter](rs::unit) -> std::vector<M> { 
                 return rs::actions::get_models_from_db<M>(db, table_name, filter);
        })
        | rs::transform(helper::to_json<std::vector<M>>)
@@ -63,7 +63,10 @@ constexpr auto get_models_from_db(soci::session &db, std::string_view table_name
 }
 
 auto get_user_by_id(soci::session &db) {
-      return rs::transform([&db](json_t, uint64_t id) -> model::User { 
+      return rs::transform([&db](handler_params::HPars_get_model_by_id pars, uint64_t id) -> model::User { 
+            if (pars.id.has_value())
+                std::cout << pars.id.value() << std::endl;
+
             auto vec = rs::actions::get_models_from_db<model::User>(db, "users", fmt::format("id = {}", id));
             if (vec.empty())
                 throw ApiException(ApiErrorId::NotFound, "User with that id is not found");
@@ -75,7 +78,8 @@ auto get_user_by_id(soci::session &db) {
 }
 
 // TODO: auto check_auth();
+} 
 
-}
+
 
 #endif
