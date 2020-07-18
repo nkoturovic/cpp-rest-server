@@ -1,5 +1,5 @@
 PROGRAM   = main.out
-CXX       = clang++
+CXX       = g++
 CXXFLAGS  = -g -std=c++20 -Wall -Wextra -Iinclude
 LFLAGS    = -pthread -lboost_system -lhttp_parser -lfmt -lsoci_sqlite3 -lsoci_core
 
@@ -21,7 +21,7 @@ json_example.out: json_example.o
 json_example.o: examples/json_example.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-main.o: main.cpp include/composition.hpp include/handler.hpp include/actions.hpp
+main.o: main.cpp include/3rd_party/composition.hpp include/handler.hpp include/actions.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 .PHONY: clean dist

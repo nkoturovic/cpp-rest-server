@@ -1,10 +1,12 @@
 #ifndef RS_ACTIONS_HPP
 #define RS_ACTIONS_HPP
 
-#include "typedefs.hpp"
-#include "model/model.hpp"
 #include <sstream>
 #include <map>
+
+#include "typedefs.hpp"
+#include "errors.hpp"
+#include "model/model.hpp"
 
 namespace rs::actions {
 

@@ -2,12 +2,12 @@
 #include <soci/sqlite3/soci-sqlite3.h>
 
 #include "handler.hpp"
-#include "model/models.hpp"
+#include "models.hpp"
 #include "handlers.hpp"
 #include "typedefs.hpp"
 #include "config.hpp"
-#include "color.hpp"
 #include "actions.hpp"
+#include "3rd_party/color.hpp"
 
 using namespace restinio;
 
@@ -21,7 +21,7 @@ int main()
             rs::ApiHandler<rs::model::User>(rs::handlers::insert_model_into_db<rs::model::User>(db, "users")));
 
     router->http_get(rs::epr::path_to_params("/api/user"),
-            rs::ApiHandler<rs::unit>(rs::handlers::get_models_from_db<rs::model::User>(db, "users")));
+            rs::ApiHandler<rs::Unit>(rs::handlers::get_models_from_db<rs::model::User>(db, "users")));
 
    router->http_get(rs::epr::path_to_params("/api/user/", 
            rs::epr::non_negative_decimal_number_p<std::uint64_t>()),

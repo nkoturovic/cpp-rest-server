@@ -74,6 +74,18 @@ void to_json(nlohmann::json& j, const M& model)
     });
 }
 
+//template <typename T1, typename T2>
+//bool move_assign_if_compatible(T1 &t1, T2 &&t2) {
+//    if (std::is_convertible_v<T2, T1>) {
+//        t1 = std::move(t2);
+//        return true;
+//    } else /* if tmp is string and field_type not conv. to string */ {
+//        field_type ftmp = boost::lexical_cast<T1>(t2); 
+//        member(model).set_value(std::move(ftmp));
+//    }
+//    return false;
+//}
+
 template <CModel M>
 void from_json(const nlohmann::json& j, M& model)
 {
@@ -119,6 +131,44 @@ std::map<std::string,std::string> to_map(M& model)
         }
      });
     return result_map;
+}
+
+
+template <CModel M, typename T>
+bool set_field(M &model, std::string_view field_name, T &&value) {
+    bool result = false;
+    refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+        if constexpr (refl::trait::is_field<decltype(member)>()) {
+            if (member.name.str() == field_name) {
+                using field_type = typename std::remove_cvref_t<decltype(member(model))>::value_type;
+                if constexpr (std::is_convertible_v<T, field_type>) {
+                    member(model).set_value(std::move(value));
+                    result = true;
+                    return;
+                } else {
+                    try {
+                        field_type casted = boost::lexical_cast<field_type>(std::move(value));
+                        member(model).set_value(std::move(casted));
+                        result = true;
+                        return;
+                    } catch (...) { 
+                    }
+                }
+            }
+        }
+    });
+    return result;
+}
+
+template <CModel M>
+auto get_field(M &model, std::string_view field_name) {
+    refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+        if constexpr (refl::trait::is_field<decltype(member)>()) {
+            if (member.name.str() == field_name) {
+                return member(model);
+            }
+        }
+    });
 }
 
 template <CModel M>

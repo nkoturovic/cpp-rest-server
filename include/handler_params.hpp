@@ -7,7 +7,7 @@
 namespace rs::handler_params {
 /* Query parameters for get_user */
 struct HPars_get_model_by_id : rs::model::Model {
-    Field<int> id;
+    Field<unsigned long> id;
 }; 
 }
 

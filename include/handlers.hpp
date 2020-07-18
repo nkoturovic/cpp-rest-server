@@ -3,15 +3,12 @@
 
 #include "handler_params.hpp"
 #include "model/constraint.hpp"
-#include "composition.hpp"
+#include "3rd_party/composition.hpp"
 #include "actions.hpp"
+#include "errors.hpp"
+#include "utils.hpp"
 
 namespace rs::helper {
-
-template <rs::model::CModel M>
-M to_model(json_t request) {
-    return M(request);
-}
 
 template <typename T>
 json_t to_json(T &&m) {
@@ -55,7 +52,7 @@ constexpr auto insert_model_into_db(soci::session &db, std::string_view table_na
 
 template <rs::model::CModel M>
 constexpr auto get_models_from_db(soci::session &db, std::string_view table_name, std::string_view filter = "") {
-      return rs::transform([&db, table_name, filter](rs::unit) -> std::vector<M> { 
+      return rs::transform([&db, table_name, filter](rs::Unit) -> std::vector<M> { 
                 return rs::actions::get_models_from_db<M>(db, table_name, filter);
        })
        | rs::transform(helper::to_json<std::vector<M>>)
@@ -64,8 +61,10 @@ constexpr auto get_models_from_db(soci::session &db, std::string_view table_name
 
 auto get_user_by_id(soci::session &db) {
       return rs::transform([&db](handler_params::HPars_get_model_by_id pars, uint64_t id) -> model::User { 
-            if (pars.id.has_value())
-                std::cout << pars.id.value() << std::endl;
+            //if (pars.id.has_value())
+            //    std::cout << pars.id.value() << std::endl;
+            //else
+            //    std::cout << "no value" << std::endl;
 
             auto vec = rs::actions::get_models_from_db<model::User>(db, "users", fmt::format("id = {}", id));
             if (vec.empty())
@@ -79,7 +78,5 @@ auto get_user_by_id(soci::session &db) {
 
 // TODO: auto check_auth();
 } 
-
-
 
 #endif
