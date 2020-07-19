@@ -11,14 +11,15 @@
 namespace rs::actions {
 
 template <rs::model::CModel M>
-constexpr M check_uniquenes_in_db(soci::session &db, std::string_view table_name, const M &m) {
+std::vector<std::string> check_uniquenes_in_db(soci::session &db, std::string_view table_name, const M &m) {
     auto us = model::unique_cnstr_fields(m);
+    std::vector<std::string> duplicates;
     for (const auto &[k,v] : us) {
          int count = 0;
          db << "SELECT COUNT(*)" << " FROM " << table_name << " WHERE " << k << "=" << "\"" << v << "\"", soci::into(count);
-         if (count) throw ApiException(ApiErrorId::InvalidParams, json_t{ { k, std::vector{ "Already exist in db" } } });
+         if (count) duplicates.push_back(k);
     }
-    return m;
+    return duplicates;
 }
 
 template <rs::model::CModel M>

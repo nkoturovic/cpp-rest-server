@@ -15,7 +15,14 @@
 
 namespace rs::model {
 
-struct Model {};
+struct Model {
+    virtual ~Model() = default;
+};
+
+struct Empty final : Model {
+};
+void from_json(const nlohmann::json&, Empty&) {};
+void to_json(nlohmann::json&, const Empty&) {};
 
 template<typename C>
 concept CModel = std::derived_from<C,Model>;

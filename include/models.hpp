@@ -17,9 +17,16 @@ struct User : Model {
     Field<unsigned long, cnstr::Required> born;
     Field<std::string> status;
 };
-}
+
+/* Request Parameters Models */
+struct Id : Model {
+    Field<unsigned long> id;
+}; 
+
+} // ns rs::model
 
 /* Required for REFLECTION!! */
+/* Models for Database */
 REFL_AUTO(
   type(rs::model::User),
   field(id),
@@ -34,5 +41,12 @@ REFL_AUTO(
 
 /* Required to enable automatic reading from sql to model and from model to sql */
 template <> struct soci::type_conversion<rs::model::User> : rs::model::specialize_model<rs::model::User> {};
+
+/* Request Parameters Models */
+REFL_AUTO(
+  type(rs::model::Id),
+  field(id)
+)
+
 
 #endif // RS_MODELS_HPP

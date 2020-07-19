@@ -21,7 +21,7 @@ json_example.out: json_example.o
 json_example.o: examples/json_example.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-main.o: main.cpp include/3rd_party/composition.hpp include/handler.hpp include/actions.hpp
+main.o: main.cpp include/handler.hpp include/actions.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 .PHONY: clean dist
