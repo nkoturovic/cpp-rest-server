@@ -8,7 +8,7 @@
 
 namespace rs {
 
-template <model::CModel RequestParamsModel, class Func>
+template <class Func, model::CModel RequestParamsModel>
 class Handler {
     Func m_handler;
 public:
@@ -28,7 +28,7 @@ public:
                    .set_body(resp_json.dump())
                    .done();
 
-        } catch(const rs::ApiException &e) {
+        } catch(const rs::Exception &e) {
              return req->create_response(e.status())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
                         .set_body(e.json().dump())
@@ -36,12 +36,12 @@ public:
         } catch (const soci::soci_error &e) {
              return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
-                    .set_body(ApiError(ApiErrorId::DBError, e.get_error_message()).json().dump())
+                    .set_body(rs::DBError(e.get_error_message()).json().dump())
                     .done();
         } catch (const std::exception &e) {
              return req->create_response(restinio::status_internal_server_error())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
-                        .set_body(ApiError(ApiErrorId::Other, e.what()).json().dump())
+                        .set_body(rs::Error(e.what()).json().dump())
                         .done();
         } catch (...) {
             return req->create_response(restinio::status_internal_server_error())
@@ -57,7 +57,7 @@ auto make_handler(Func &&f)
 {
     using traits = rs::function_traits<Func>;
     using arg_type = typename traits:: template arg<0>::type;
-    return Handler<std::remove_cvref_t<arg_type>, Func>(std::forward<Func>(f));
+    return Handler<Func, std::remove_cvref_t<arg_type>>(std::forward<Func>(f));
 }
 
 } // ns rs

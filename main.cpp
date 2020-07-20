@@ -19,8 +19,12 @@ int main()
 
     router->http_post(rs::epr::path_to_params("/api/user"), 
         rs::make_handler([&db](rs::model::User &&user) -> rs::json_t {
-            rs::throw_unsatisfied_constrainsts(user);
-            rs::throw_check_uniquenes_in_db<rs::model::User>(db, "users", user);
+            auto errs = rs::model::apply_to_unsatisfied_cnstrs_of_model(user, cnstr::description);
+            rs::throw_if<rs::InvalidParamsError>(errs.size(), std::move(errs)); 
+            auto duplicates = rs::actions::check_uniquenes_in_db(db, "users", user);
+            rs::json_t err_msg; 
+            for (const auto &d : duplicates) err_msg[d] = "Already exist in db";
+            rs::throw_if<rs::InvalidParamsError>(duplicates.size(), std::move(err_msg));
             rs::actions::insert_model_into_db<rs::model::User>(db, "users", std::move(user));
             return rs::success_response("Model successfully inserted into db");
         })
@@ -42,7 +46,7 @@ int main()
 
              auto vec = rs::actions::get_models_from_db<rs::model::User>(db, "users", fmt::format("id = {}", id));
              if (vec.empty())
-                 throw rs::ApiException(rs::ApiErrorId::NotFound, "User with that id is not found");
+                 throw rs::NotFoundError("User with that id is not found");
              else 
                  return vec.back();
        })
@@ -52,7 +56,7 @@ int main()
             [](auto req) {
                 return req->create_response(restinio::status_not_found()).connection_close()
                 .append_header( restinio::http_field::content_type, "application/json" )
-                .set_body(rs::ApiError(rs::ApiErrorId::NotFound).json().dump())
+                .set_body(rs::NotFoundError().json().dump())
                 .done();
             });
 
