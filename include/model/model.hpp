@@ -98,31 +98,87 @@ void from_json(const nlohmann::json& j, M& model)
 }
 
 template <CModel M>
-auto initialized_fields_str(const M& model) {
+constexpr auto fields(const M& model) {
+    return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
+           return member(model);
+    });
+}
+
+template <CModel M>
+constexpr auto fields(M&& model) {
+    return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
+           return member(std::move(model));
+    });
+}
+
+template <CModel M>
+constexpr auto field_values(const M& model) {
+    return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
+            return member(model).opt_value();
+    });
+}
+
+template <CModel M>
+constexpr auto field_values(M&& model) {
+    return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
+            return member(std::move(model)).opt_value();
+    });
+}
+
+template <CModel M>
+constexpr auto field_values_str(const M& model) {
+     return refl::util::map_to_array<std::optional<std::string>>(refl::reflect(model).members, [&model](auto member) {
+            if (auto field = member(model); field.has_value())
+                return std::make_optional<std::string>(fmt::format("{}", field.value()));
+            else
+                return std::optional<std::string>{std::nullopt};
+     });
+}
+
+template <CModel M>
+constexpr auto field_values_str(M&& model) {
+     return refl::util::map_to_array<std::optional<std::string>>(refl::reflect(model).members, [&model](auto member) {
+            if (auto field = member(model); field.has_value())
+                return std::make_optional<std::string>(fmt::format("{}", std::move(field.value())));
+            else
+                return std::optional<std::string>{std::nullopt};
+     });
+}
+
+template <CModel M>
+auto fields_with_value_str(const M& model) {
 
     auto names = field_names(model);
-    auto values = field_values_str(model);
+    auto opt_values = field_values_str(model);
     std::vector<std::string> ns; ns.reserve(names.size());
     std::vector<std::string> vs; vs.reserve(names.size());
 
     for (unsigned i=0; i < names.size(); i++) {
-        if (values[i] != "") {
+        if (opt_values[i].has_value()) {
             ns.push_back(std::move(names[i]));
-            vs.push_back(std::move(values[i]));
+            vs.push_back(std::move(opt_values[i].value()));
         }
     }
     return std::pair{ns, vs};
 }
 
 template <CModel M>
-constexpr auto field_values_str(const M& model) {
-     return refl::util::map_to_array<std::string>(refl::reflect(model).members, [&model](auto member) {
-            if (auto field = member(model); field.has_value())
-                return fmt::format("{}", field.value());
-            else
-                return std::string{""};
-     });
+auto fields_with_value_str(M&& model) {
+
+    auto names = field_names(model);
+    auto opt_values = field_values_str(std::move(model));
+    std::vector<std::string> ns; ns.reserve(names.size());
+    std::vector<std::string> vs; vs.reserve(names.size());
+
+    for (unsigned i=0; i < names.size(); i++) {
+        if (opt_values[i].has_value()) {
+            ns.push_back(std::move(names[i]));
+            vs.push_back(std::move(opt_values[i].value()));
+        }
+    }
+    return std::pair{ns, vs};
 }
+
 
 template <CModel M>
 constexpr auto field_names(const M& model) 
@@ -133,10 +189,10 @@ constexpr auto field_names(const M& model)
 }
 
 template <CModel M>
-constexpr auto field_values(const M& model) {
-    return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
-               if constexpr (is_readable(member))
-                   return member(model);
+constexpr auto field_names(M&& model) 
+{
+    return refl::util::map_to_array<std::string>(refl::reflect(std::move(model)).members, [](auto member) {
+               return member.name.str();
     });
 }
 

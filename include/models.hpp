@@ -8,19 +8,19 @@ namespace rs::model {
 
 /* Models for Database */
 struct User : Model {
-    Field<int,cnstr::Unique> id;
+    Field<int32_t,cnstr::Unique> id;
     Field<std::string, cnstr::Unique, cnstr::Length<1,10>, cnstr::Required> username;
     Field<std::string, cnstr::Required, cnstr::Length<6,255>> password;
     Field<std::string, cnstr::Unique,cnstr::Required, cnstr::NotEmpty, cnstr::Length<2,32>> email;
     Field<std::string, cnstr::Required, cnstr::Length<2,64>> firstname;
     Field<std::string, cnstr::Required, cnstr::Length<2,64>> lastname;
-    Field<int, cnstr::Required> born;
+    Field<int32_t, cnstr::Required> born;
     Field<std::string> status;
 };
 
 /* Request Parameters Models */
 struct Id : Model {
-    Field<unsigned long> id;
+    Field<int32_t> id;
 }; 
 
 } // ns rs::model

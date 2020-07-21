@@ -16,9 +16,12 @@ public:
     Field(T &&value) 
         : m_value(std::move(value)) {}
 
-    const T& value() const { return m_value.value(); }
+    constexpr const T& value() const { return m_value.value(); }
+    constexpr T&& value() { return std::move(*m_value); }
+    constexpr const std::optional<T>& opt_value() const { return m_value; }
+    std::optional<T>&& opt_value() { return std::move(m_value); }
+
     void set_value(T&& value) { m_value = std::move(value); }
-    T&& move_value() { return std::move(*m_value); }
     void erase_value() { m_value = { std::nullopt }; }
 
     template <class Func, class ... FArgs>

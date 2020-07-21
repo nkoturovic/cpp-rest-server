@@ -15,10 +15,10 @@ template <rs::model::CModel M>
 std::vector<std::string> check_uniquenes_in_db(soci::session &db, std::string_view table_name, const M &m) {
     auto us = model::unique_cnstr_fields(m);
     std::vector<std::string> duplicates;
-    for (const auto &[k,v] : us) {
-         int count = 0;
+    for (int count; auto &&[k,v] : us) {
+         count = 0;
          db << "SELECT COUNT(*)" << " FROM " << table_name << " WHERE " << k << "=" << "\"" << v << "\"", soci::into(count);
-         if (count) duplicates.push_back(k);
+         if (count) duplicates.push_back(std::move(k));
     }
     return duplicates;
 }
@@ -37,18 +37,17 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
     std::vector<M> models;
 
     while (get_models_stmt.fetch()) {
-        models.push_back(m);
+        models.push_back(std::move(m));
     }
 
     return models;
 }
 
 template <rs::model::CModel M>
-void insert_model_into_db(soci::session &db, std::string_view table_name, M && m) {
-    auto [names, values] = initialized_fields_str(m);
+void insert_model_into_db(soci::session &db, std::string_view table_name, M &&m) {
+    auto [names, values] = fields_with_value_str(std::move(m));
     auto names_str = boost::algorithm::join(std::move(names), ", ");
-    auto values_str = std::string{"\""}.append(boost::algorithm::join(std::move(values), "\", \"")).append("\"");
-
+    auto values_str = std::string{"'"}.append(boost::algorithm::join(std::move(values), "', '")).append("'");
     db << "INSERT INTO " << table_name << "(" << names_str << ")" << " VALUES(" <<  values_str << ")";
 }
 
