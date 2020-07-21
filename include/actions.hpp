@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <map>
+#include <boost/algorithm/string/join.hpp>
 
 #include "typedefs.hpp"
 #include "errors.hpp"
@@ -25,18 +26,17 @@ std::vector<std::string> check_uniquenes_in_db(soci::session &db, std::string_vi
 template <rs::model::CModel M>
 std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name, std::string_view filter = "") {
     M m;
-
-    std::string filterStmt = "";
+    std::string filter_stmt = "";
 
     if (filter.size())
-        filterStmt.append(" WHERE ").append(filter);
+        filter_stmt.append(" WHERE ").append(filter);
 
-    soci::statement getModelsStmt = (db.prepare << "SELECT * FROM " << table_name << filterStmt, soci::into(m));
-    getModelsStmt.execute();
+    soci::statement get_models_stmt = (db.prepare << "SELECT * FROM " << table_name << filter_stmt, soci::into(m));
+    get_models_stmt.execute();
 
     std::vector<M> models;
 
-    while (getModelsStmt.fetch()) {
+    while (get_models_stmt.fetch()) {
         models.push_back(m);
     }
 
@@ -45,22 +45,11 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
 
 template <rs::model::CModel M>
 void insert_model_into_db(soci::session &db, std::string_view table_name, M && m) {
-    auto model_map = model::to_map(m);
-    std::vector<std::string> keys (model_map.size());
-    std::vector<std::string> values (model_map.size());
+    auto [names, values] = initialized_fields_str(m);
+    auto names_str = boost::algorithm::join(std::move(names), ", ");
+    auto values_str = std::string{"\""}.append(boost::algorithm::join(std::move(values), "\", \"")).append("\"");
 
-    std::transform(model_map.begin(), model_map.end(), keys.begin(), [](const auto &m) { return m.first; });
-    std::transform(model_map.begin(), model_map.end(), values.begin(), [](const auto &m) { return m.second; });
-
-    std::string ks = std::accumulate(keys.begin(), keys.end(), std::string{}, [](std::string s1, std::string s2) { 
-            return std::move(s1) + (s1 != "" ? ", " : "") + std::move(s2);
-    });
-
-    std::string vs = std::accumulate(values.begin(), values.end(), std::string{}, [](std::string s1, std::string s2) { 
-            return std::move(s1) + (s1 != "" ? ", " : "")  + "\"" + std::move(s2) + "\"";
-    });
-
-    db << "INSERT INTO " << table_name << "(" << ks << ")" << " VALUES(" << vs << ")";
+    db << "INSERT INTO " << table_name << "(" << names_str << ")" << " VALUES(" <<  values_str << ")";
 }
 
 }
