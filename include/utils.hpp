@@ -34,7 +34,7 @@ RequestParamsModel extract_request_params_model(const auto &req) {
             RequestParamsModel params;
             for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
                 auto key_str = fmt::format("{}", k);
-                model::set_field(params, key_str, std::string(v));
+                params.set_field(key_str, std::string(v));
             }
             return params;
         } else /* if (req_method == restinio::http_method_post()) */ {

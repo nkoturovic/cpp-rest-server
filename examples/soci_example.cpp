@@ -2,7 +2,7 @@
 #include <concepts/concepts.hpp>
 #include <soci/soci.h>
 #include <soci/sqlite3/soci-sqlite3.h>
-#include "model/model.hpp"
+#include "models.hpp"
 
 int main() {
 
@@ -13,7 +13,7 @@ int main() {
         getUsersStmt.execute();
 
         // Izvlacimo opise svih nezadovoljenih constraint-ova i stampamo na cout
-        if (auto unsat = rs::model::fmap_unsatisfied_cnstr(user, cnstr::name); unsat.size()) {
+        if (auto unsat = user.unsatisfied_constraints().transform(rs::cnstr::name); unsat.size()) {
                 std::cout << nlohmann::json(unsat) << '\n';
         }
 
@@ -23,8 +23,9 @@ int main() {
             nlohmann::json j(user); // pretvaramo u json
             std::cout << j << '\n'; // stampamo
             // Pretvaramo u mapu i iteriramo [k,v]
-            for (auto &[k,v] : rs::model::to_map(user)) {
-                std::cout << k << " -> " << v << std::endl;
+            auto [ks,vs] = user.fields_with_value_str();
+            for (unsigned i = 0; i < ks.size(); i++) {
+                std::cout << ks[i] << " -> " << vs[i] << std::endl;
             }
             std::cout << "======================================\n";
         }

@@ -11,15 +11,14 @@
 #include <boost/hana.hpp>
 namespace hana = boost::hana;
 
-namespace cnstr {
+namespace rs::cnstr {
 
 /* Compile type concept (trait) for what is Constraint */
 template<typename C>
 concept Cnstr = requires(typename C::value_type t) {
     { C::is_satisfied(t) } -> std::same_as<bool>;
     { C::name() } -> std::same_as<const char *>;
-    { C::description_en() } -> std::same_as<std::string>;
-    { C::description_rs() } -> std::same_as<std::string>;
+    { C::description() } -> std::same_as<std::string>;
 };
 
 /* --------- Constraints --------- */
@@ -32,10 +31,7 @@ struct Void {
     constexpr static const char * name() {
         return "Void";
     }
-    static std::string description_en() {
-        return "Void Constraint";
-    }
-    static std::string description_rs() {
+    static std::string description() {
         return "Void Constraint";
     }
 };
@@ -51,12 +47,8 @@ struct Required {
         return "Required";
     }
 
-    static std::string description_en() {
+    static std::string description() {
         return "Field should not be empty or invalid";
-    }
-
-    static std::string description_rs() {
-        return "Polje ne sme biti prazno ili nevalidno";
     }
 };
 
@@ -69,13 +61,9 @@ struct Unique {
    constexpr static const char * name() {
         return "Unique";
     }
-   static std::string description_en() {
+   static std::string description() {
         return "Not available";
    }
-
-   static std::string description_rs() {
-        return "Zauzeto";
-    }
 };
 /* ------------ String ----------- */
 struct NotEmpty {
@@ -85,13 +73,9 @@ struct NotEmpty {
     constexpr static bool is_satisfied(std::string_view s) { return !s.empty(); } 
     constexpr static const char * name() { return "NotEmpty"; }
 
-    static std::string description_en() {
+    static std::string description() {
         return "Field must not be empty";
     }
-    static std::string description_rs() {
-        return "Polje ne sme biti prazno";
-    }
-
 };
 
 template<int from_ = 0, int to_ = from_>
@@ -107,11 +91,8 @@ struct Length {
     }
     constexpr static const char * name() { return "Length"; }
 
-    static std::string description_en() {
+    static std::string description() {
         return fmt::format("Length should be between {} and {} characters", from, to);
-    }
-    static std::string description_rs() {
-        return fmt::format("Duzina mora da bude izmedju {} i {} karaktera", from, to);
     }
 };
 
@@ -130,22 +111,13 @@ struct Between {
 
     constexpr static const char * name() { return "Between"; }
 
-    static std::string description_en() {
+    static std::string description() {
         return fmt::format("Value should be in range {} to {}", from, to);
     }
-
-    static std::string description_rs() {
-        return fmt::format("Vrednost treba da bude u opsegu od {} do {}", from, to);
-    }
-
 };
 
-constexpr auto description = []<Cnstr C>(std::string_view lang = "en") -> std::string {
-    if (lang == "rs") {
-        return C::description_rs();
-    } else /* if lang en */ {
-        return C::description_en();
-    }
+constexpr auto description = []<Cnstr C>() -> std::string {
+    return C::description();
 };
 
 constexpr auto name = []<Cnstr C>() -> const char * {
@@ -166,7 +138,7 @@ constexpr auto name = []<Cnstr C>() -> const char * {
 //         if (lang == "rs") {
 //             return C::description_rs();
 //         } else /* if lang en */ {
-//             return C::description_en();
+//             return C::description();
 //         }
 //     }
 // };

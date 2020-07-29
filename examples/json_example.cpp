@@ -1,6 +1,6 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include "model/models.hpp" // rs::User
+#include "models.hpp" // rs::User
 
 int main()
 {
@@ -10,7 +10,7 @@ int main()
         .email = { "" },
         .firstname = { "Nebojsa" },
         .lastname = { "Koturovic" },
-        .born = { 813336633 }, /* Linux Time */
+        .born = { "1995-10-10" },
     };
 
     /* operator<< je automatski impl (refleksija) */
@@ -20,7 +20,8 @@ int main()
     std::cout << nlohmann::json(kotur).dump(2) << '\n';
 
     /* Izvlacenje OPISA nezadovoljenih CONSTRAINT-ova */
-    if (auto ds_map = rs::model::apply_to_unsatisfied_cnstrs_of_model(kotur, cnstr::description, "rs"); ds_map.size())
+    if (auto ds_map = kotur.unsatisfied_constraints()
+                           .transform(rs::cnstr::description); ds_map.size())
         std::cout << rs::json_t(ds_map).dump(2) << '\n';
 
     return 0;

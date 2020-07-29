@@ -13,7 +13,7 @@ namespace rs::actions {
 
 template <rs::model::CModel M>
 std::vector<std::string> check_uniquenes_in_db(soci::session &db, std::string_view table_name, const M &m) {
-    auto us = model::unique_cnstr_fields(m);
+    auto us = m.unique_cnstr_fields();
     std::vector<std::string> duplicates;
     for (int count; auto &&[k,v] : us) {
          count = 0;
@@ -45,7 +45,7 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
 
 template <rs::model::CModel M>
 void insert_model_into_db(soci::session &db, std::string_view table_name, M &&m) {
-    auto [names, values] = fields_with_value_str(std::move(m));
+    auto [names, values] = m.fields_with_value_str();
     auto names_str = boost::algorithm::join(std::move(names), ", ");
     auto values_str = std::string{"'"}.append(boost::algorithm::join(std::move(values), "', '")).append("'");
     db << "INSERT INTO " << table_name << "(" << names_str << ")" << " VALUES(" <<  values_str << ")";

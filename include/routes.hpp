@@ -10,13 +10,13 @@ namespace rs {
 
 inline void register_routes(rs::router_t &router, soci::session &db) {
 
-    router.http_get(rs::epr::path_to_params("/api/user"),
+    router.http_get(rs::epr::path_to_params("/api/users"),
             rs::make_handler([&db](rs::model::Empty&&) -> rs::json_t {
                 return rs::actions::get_models_from_db<rs::model::User>(db, "users");
             })
     );
 
-    router.http_get(rs::epr::path_to_params("/api/user/", 
+    router.http_get(rs::epr::path_to_params("/api/users/", 
             rs::epr::non_negative_decimal_number_p<std::uint64_t>()),
             rs::make_handler([&db](rs::model::Id&& req_params, std::uint64_t id) -> rs::json_t {
              if (req_params.id.has_value())
@@ -32,9 +32,9 @@ inline void register_routes(rs::router_t &router, soci::session &db) {
        })
     );
 
-    router.http_post(rs::epr::path_to_params("/api/user"), 
+    router.http_post(rs::epr::path_to_params("/api/users"), 
         rs::make_handler([&db](rs::model::User &&user) -> rs::json_t {
-            auto errs = rs::model::apply_to_unsatisfied_cnstrs_of_model(user, cnstr::description);
+            auto errs = user.unsatisfied_constraints().transform(cnstr::description);
             rs::throw_if<rs::InvalidParamsError>(errs.size(), std::move(errs)); 
             auto duplicates = rs::actions::check_uniquenes_in_db(db, "users", user);
             rs::json_t err_msg; 
