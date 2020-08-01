@@ -53,8 +53,8 @@ public:
     template <CError E>
     Error(E &&e, nlohmann::json &&info = {}) : error(std::move(e)), info(std::move(info)) {}
 
-    std::string_view id() const { return std::visit([]<CError E>(E const&) { return E::id; }, this->error); }
-    std::string_view msg() const { return std::visit([]<CError E>(E const&) { return E::msg; }, this->error); }
+    constexpr std::string_view id() const { return std::visit([]<CError E>(E const&) { return E::id; }, this->error); }
+    constexpr std::string_view msg() const { return std::visit([]<CError E>(E const&) { return E::msg; }, this->error); }
     const restinio::http_status_line_t status() const { return std::visit([]<CError E>(E const&) { return E::status; }, this->error); }
 
     constexpr const char * what() const noexcept override {

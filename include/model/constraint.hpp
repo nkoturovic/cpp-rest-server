@@ -6,11 +6,10 @@
 #include <any>
 #include <concepts>
 
-//#include "utils.hpp"
-
 #include <boost/hana.hpp>
 namespace hana = boost::hana;
 
+//#include "utils.hpp"
 
 namespace rs {
 /* Helper for conversion from integral constant to hana string */

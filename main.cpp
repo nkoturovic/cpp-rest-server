@@ -21,7 +21,7 @@ int main()
         [](auto req) {
             return req->create_response(restinio::status_not_found()).connection_close()
                        .append_header( restinio::http_field::content_type, "application/json" )
-                       .set_body(nlohmann::json(rs::make_error<rs::NotFoundError>()).dump())
+                       .set_body(nlohmann::json(rs::NotFoundError{}).dump())
                        .done();
         });
 
