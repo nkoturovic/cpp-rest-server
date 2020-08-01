@@ -3,6 +3,7 @@
 
 #include "routes.hpp"
 #include "typedefs.hpp"
+#include "utils.hpp"
 #include "config.hpp"
 #include "3rd_party/color.hpp"
 
@@ -20,7 +21,7 @@ int main()
         [](auto req) {
             return req->create_response(restinio::status_not_found()).connection_close()
                        .append_header( restinio::http_field::content_type, "application/json" )
-                       .set_body(rs::NotFoundError().json().dump())
+                       .set_body(nlohmann::json(rs::make_error<rs::NotFoundError>()).dump())
                        .done();
         });
 

@@ -6,7 +6,7 @@ class ServerConfig {
     std::string m_address = "localhost";
     unsigned m_port = 80;
 public:
-    ServerConfig(json_t json) {
+    ServerConfig(nlohmann::json json) {
         try {
             json["address"].get_to(m_address);
             json["port"].get_to(m_port);
@@ -19,7 +19,7 @@ public:
 
     ServerConfig(const char *path) {
          if (std::ifstream in_json_file(path); in_json_file.is_open()) {
-            json_t json;
+             nlohmann::json json;
             in_json_file >> json;
             *this = ServerConfig(json);
          }

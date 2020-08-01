@@ -29,12 +29,8 @@ namespace rs {
 
 struct Unit {}; // Unit type -> composable replacement for void
 
-using json_t = nlohmann::json;
-
 namespace epr = restinio::router::easy_parser_router;
 using router_t = restinio::router::easy_parser_router_t;
-//using handler_t = restinio::router::express_request_handler_t;
-using api_response_t = json_t;
 
 }
 

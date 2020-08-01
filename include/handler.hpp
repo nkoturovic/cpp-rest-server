@@ -18,8 +18,8 @@ public:
         template <typename... RouteParams>
         restinio::request_handling_status_t operator()(restinio::request_handle_t req, RouteParams...routeparams) const {
         try {
-            json_t resp_json;
-            json_t json_req = rs::extract_request_params_model<RequestParamsModel>(req);
+            nlohmann::json resp_json;
+            nlohmann::json json_req = rs::extract_request_params_model<RequestParamsModel>(req);
             RequestParamsModel pars(std::move(json_req));
             resp_json = m_handler(std::move(pars), routeparams...);
 
@@ -28,20 +28,20 @@ public:
                    .set_body(resp_json.dump())
                    .done();
 
-        } catch(const rs::Exception &e) {
+        } catch(const rs::Error &e) {
              return req->create_response(e.status())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
-                        .set_body(e.json().dump())
+                        .set_body(nlohmann::json(e).dump())
                         .done();
         } catch (const soci::soci_error &e) {
              return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
-                    .set_body(rs::DBError(e.get_error_message()).json().dump())
+                    .set_body(nlohmann::json(rs::make_error<rs::DBError>(e.get_error_message())).dump())
                     .done();
         } catch (const std::exception &e) {
              return req->create_response(restinio::status_internal_server_error())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
-                        .set_body(rs::Error(e.what()).json().dump())
+                        .set_body(nlohmann::json(rs::make_error<rs::OtherError>(e.what())).dump())
                         .done();
         } catch (...) {
             return req->create_response(restinio::status_internal_server_error())

@@ -2,78 +2,91 @@
 #define RS_ERRORS_HPP
 
 #include "typedefs.hpp"
+#include <string_view>
 
 namespace rs {
 
-class Exception : std::exception {
-protected:
-    Exception(json_t &&info) : info(std::move(info)) {}
-public:
-    json_t info;
+/* Compile type concept (trait) for what is Error */
+template<typename E>
+concept CError = requires(E e) {
+    { E::id } -> std::convertible_to<std::string_view>;
+    { E::msg } -> std::convertible_to<std::string_view>;
+};
 
-    virtual ~Exception() = default;
-    constexpr virtual const char * id() const = 0;
-    constexpr virtual const char * msg() const = 0;
-    constexpr virtual restinio::http_status_line_t status() const = 0;
-    const char * what() const noexcept override {
-        return this->msg();
+struct OtherError {
+     constexpr static std::string_view id = "OtherError";
+     constexpr static std::string_view msg = "Other error";
+     inline static const restinio::http_status_line_t status = restinio::status_internal_server_error();
+};
+
+struct InvalidParamsError {
+     constexpr static std::string_view id = "InvalidParamsError";
+     constexpr static std::string_view msg = "Invalid parameters";
+     inline static const restinio::http_status_line_t status = restinio::status_bad_request();
+};
+
+struct JsonParseError {
+     constexpr static std::string_view id = "JsonParseError";
+     constexpr static std::string_view msg = "Error parsing JSON";
+     inline static const restinio::http_status_line_t status = restinio::status_bad_request();
+};
+
+struct NotFoundError {
+     constexpr static std::string_view id = "NotFoundError";
+     constexpr static std::string_view msg = "Reqource not found";
+     inline static const restinio::http_status_line_t status = restinio::status_not_found();
+};
+
+struct DBError {
+     constexpr static std::string_view id = "NotFoundError";
+     constexpr static std::string_view msg = "Reqource not found";
+     inline static const restinio::http_status_line_t status = restinio::status_internal_server_error();
+};
+
+class Error final : std::exception {
+public:
+    using error_type = std::variant<OtherError, InvalidParamsError, JsonParseError, NotFoundError, DBError>;
+
+    error_type error;
+    nlohmann::json info = {};
+
+    template <CError E>
+    Error(E &&e, nlohmann::json &&info = {}) : error(std::move(e)), info(std::move(info)) {}
+
+    std::string_view id() const { return std::visit([]<CError E>(E const&) { return E::id; }, this->error); }
+    std::string_view msg() const { return std::visit([]<CError E>(E const&) { return E::msg; }, this->error); }
+    const restinio::http_status_line_t status() const { return std::visit([]<CError E>(E const&) { return E::status; }, this->error); }
+
+    constexpr const char * what() const noexcept override {
+        return std::visit([]<CError E>(E const & /* */) {
+                return E::msg.data();
+        }, error);
     }
-
-    json_t json() const {
-        json_t j;
-        j["error_id"] = this->id();
-        j["message"] = this->msg();
-
-        if (!info.is_null() || !info.empty())
-            j["info"] = info;
-
-        return j;
-    }
 };
 
-template<typename C>
-concept CException = std::derived_from<C,Exception>;
-
-class Error final : public Exception {
-public:
-    Error(json_t &&info = {}) : Exception(std::move(info)) {}
-    constexpr const char * id() const override { return "OtherError"; }
-    constexpr const char * msg() const override { return "Other error"; }
-    restinio::http_status_line_t status() const override { return restinio::status_internal_server_error(); }
-};
-
-class InvalidParamsError final : public Exception {
-public:
-    InvalidParamsError(json_t &&info = {}) : Exception(std::move(info)) {}
-    constexpr const char * id() const override { return "InvalidParams"; }
-    constexpr const char * msg() const override { return "Invalid Parameters"; }
-    restinio::http_status_line_t status() const override { return restinio::status_bad_request(); }
-};
-
-class JsonParseError final : public Exception {
-public:
-    JsonParseError(json_t &&info = {}) : Exception(std::move(info)) {}
-    constexpr const char * id() const override { return "JsonParseError"; }
-    constexpr const char * msg() const override { return "Error parsing JSON"; }
-    restinio::http_status_line_t status() const override { return restinio::status_bad_request(); }
-};
-
-class NotFoundError final : public Exception {
-public:
-    NotFoundError(json_t &&info = {}) : Exception(std::move(info)) {}
-    constexpr const char * id() const override { return "NotFound"; }
-    constexpr const char * msg() const override { return "Resource not found"; }
-    restinio::http_status_line_t status() const override { return restinio::status_not_found(); }
-};
-
-class DBError final : public Exception {
-public:
-    DBError(json_t &&info = {}) : Exception(std::move(info)) {}
-    constexpr const char * id() const override { return "DBError"; }
-    constexpr const char * msg() const override { return "Database Error"; }
-    restinio::http_status_line_t status() const override { return restinio::status_internal_server_error(); }
-};
+template <CError E> 
+inline Error make_error(nlohmann::json &&j = {}) {
+    return Error(E{}, std::move(j));
+}
 
 } // ns rs
+
+template<rs::CError E>
+struct nlohmann::adl_serializer<E> {
+    static void to_json(nlohmann::json &j, const E& /**/) {
+        j["error_id"] = E::id;
+        j["message"] = E::msg;
+   }
+};
+
+template <>
+struct nlohmann::adl_serializer<rs::Error> {
+    static void to_json(nlohmann::json &j, rs::Error const& err) {
+        j = std::visit([]<rs::CError E>(E const& e) { return nlohmann::json(e); }, err.error);
+
+        if (!err.info.is_null() || !err.info.empty())
+            j["info"] = err.info;
+    }
+};
 
 #endif 

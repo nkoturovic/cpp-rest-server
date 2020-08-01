@@ -11,18 +11,18 @@ namespace hana = boost::hana;
 
 namespace rs {
 
-json_t success_response(std::string_view info = "") {
-    json_t json;
+nlohmann::json success_response(std::string_view info = "") {
+    nlohmann::json json;
     json["message"] = "SUCCESS";
     if (!info.empty())
         json["info"] = info;
     return json;
 };
 
-template <CException E>
-constexpr void throw_if(bool condition, json_t &&info = {}) {
+template <CError E>
+constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
     if (condition)
-        throw E(std::move(info));
+        throw make_error<E>(std::move(info));
 }
 
 /* Parse aditional args (used in handlers.hpp): 
@@ -50,7 +50,7 @@ RequestParamsModel extract_request_params_model(const auto &req) {
                     return RequestParamsModel(nlohmann::json::parse(src));
                 }
             } catch (const nlohmann::json::parse_error &perror) {
-                throw rs::JsonParseError(perror.what());
+                throw rs::make_error<rs::JsonParseError>(perror.what());
             }
         }
     }
