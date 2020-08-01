@@ -52,8 +52,7 @@ struct specialize_model
     }
 };
 
-template <CModel M>
-std::ostream& operator<<(std::ostream &out, const M& model) {
+std::ostream& operator<<(std::ostream &out, CModel auto const& model) {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
           if constexpr (refl::trait::is_field<decltype(member)>()) {
               if (member(model).has_value()) {
@@ -64,8 +63,7 @@ std::ostream& operator<<(std::ostream &out, const M& model) {
     return out;
 }
 
-template <CModel M>
-void to_json(nlohmann::json& j, const M& model)
+void to_json(nlohmann::json& j, CModel auto const& model)
 {
     j = nlohmann::json{};
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
@@ -77,8 +75,7 @@ void to_json(nlohmann::json& j, const M& model)
     });
 }
 
-template <CModel M>
-void from_json(const nlohmann::json& j, M& model)
+void from_json(const nlohmann::json& j, CModel auto& model)
 {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         using field_type = typename std::remove_cvref_t<decltype(member(model))>::value_type;
@@ -212,7 +209,7 @@ public:
     }
 
 
-    auto unsatisfied_constraints() const {
+    auto get_unsatisfied_constraints() const {
         Derived const& model = static_cast<Derived const&>(*this);
         return ModelConstraintsWrapper(refl::util::map_to_tuple(refl::reflect(model).members, [&](auto member) {
                 return std::pair {member.name.str(), member(model).unsatisfied_constraints};

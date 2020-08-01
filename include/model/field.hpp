@@ -18,7 +18,6 @@ public:
 
     struct {
         const std::optional<T>& m_value;
-        
         template <class Func, class ... FArgs>
         auto transform(Func && f, FArgs &&...fargs) const {
             std::vector<decltype(f.template operator()<cnstr::Void>(fargs...))> vec;

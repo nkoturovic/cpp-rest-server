@@ -6,7 +6,11 @@
 #include "errors.hpp"
 #include "actions.hpp"
 
+#include <boost/hana.hpp>
+namespace hana = boost::hana;
+
 namespace rs {
+
 json_t success_response(std::string_view info = "") {
     json_t json;
     json["message"] = "SUCCESS";

@@ -6,10 +6,39 @@
 #include <any>
 #include <concepts>
 
-#include <fmt/compile.h>
+//#include "utils.hpp"
 
 #include <boost/hana.hpp>
 namespace hana = boost::hana;
+
+
+namespace rs {
+/* Helper for conversion from integral constant to hana string */
+constexpr size_t get_magnitude(size_t num) {
+  unsigned i = 0;
+  while (num > 0) {
+    num /= 10;
+    ++i;
+  }
+  return i;
+}
+
+template <typename X, size_t ...i>
+constexpr auto to_hana_string(X x,
+                         std::index_sequence<i...>) {
+  constexpr size_t mag = get_magnitude(X::value);
+  return hana::string<
+    (x / hana::power(hana::size_c<10>,
+                     hana::size_c<mag - i - 1>) % hana::size_c<10> 
+                       + hana::size_c<48>)...>{};
+}
+
+template <typename X>
+constexpr auto to_hana_string(X /*x*/) {
+  return to_hana_string(hana::size_c<static_cast<size_t>(X::value)>,
+                   std::make_index_sequence<get_magnitude(X::value)>());
+}
+}
 
 namespace rs::cnstr {
 
@@ -17,8 +46,8 @@ namespace rs::cnstr {
 template<typename C>
 concept Cnstr = requires(typename C::value_type t) {
     { C::is_satisfied(t) } -> std::same_as<bool>;
-    { C::name() } -> std::same_as<const char *>;
-    { C::description() } -> std::same_as<std::string>;
+    { C::name } -> std::convertible_to<std::string_view>;
+    { C::description } -> std::convertible_to<std::string_view>;
 };
 
 /* --------- Constraints --------- */
@@ -28,28 +57,18 @@ struct Void {
 
     static bool is_satisfied(const std::any &) { return true; }
 
-    constexpr static const char * name() {
-        return "Void";
-    }
-    static std::string description() {
-        return "Void Constraint";
-    }
+    constexpr static std::string_view name = "Void";
+    constexpr static std::string_view description = "Void Constraint";
 };
 
 
 struct Required {
     using value_type = std::any;
     Required() = delete;
-
     static bool is_satisfied(const std::any &a) { return a.has_value(); } 
 
-    constexpr static const char * name() {
-        return "Required";
-    }
-
-    static std::string description() {
-        return "Field should not be empty or invalid";
-    }
+    constexpr static std::string_view name = "Required";
+    constexpr static std::string_view description = "Field should not be empty or invalid";
 };
 
 struct Unique {
@@ -58,12 +77,8 @@ struct Unique {
         return true; 
     }
 
-   constexpr static const char * name() {
-        return "Unique";
-    }
-   static std::string description() {
-        return "Not available";
-   }
+   constexpr static std::string_view name = "Unique";
+   constexpr static std::string_view description = "Not Available";
 };
 /* ------------ String ----------- */
 struct NotEmpty {
@@ -71,11 +86,8 @@ struct NotEmpty {
     NotEmpty() = delete;
 
     constexpr static bool is_satisfied(std::string_view s) { return !s.empty(); } 
-    constexpr static const char * name() { return "NotEmpty"; }
-
-    static std::string description() {
-        return "Field must not be empty";
-    }
+    constexpr static std::string_view name = "NotEmpty";
+    constexpr static std::string_view description = "Field must not be empty";
 };
 
 template<int from_ = 0, int to_ = from_>
@@ -89,11 +101,9 @@ struct Length {
     constexpr static bool is_satisfied(std::string_view s) {
         return (s.length() >= from) && (s.length() <= to);
     }
-    constexpr static const char * name() { return "Length"; }
-
-    static std::string description() {
-        return fmt::format("Length should be between {} and {} characters", from, to);
-    }
+    constexpr static std::string_view name = "Length";
+    constexpr static std::string_view description = (BOOST_HANA_STRING("Length should be from ") + rs::to_hana_string(hana::int_c<from>) + 
+                                                     BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
 };
 
 /* ------------ Int ----------- */
@@ -109,43 +119,19 @@ struct Between {
         return (x >= from) && (x <= to);
     }
 
-    constexpr static const char * name() { return "Between"; }
-
-    static std::string description() {
-        return fmt::format("Value should be in range {} to {}", from, to);
-    }
+    constexpr static std::string_view name = "Between";
+    constexpr static std::string_view description = (BOOST_HANA_STRING("Value should be in range from ") + rs::to_hana_string(hana::int_c<from>) + 
+                                                     BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
 };
 
-constexpr auto description = []<Cnstr C>() -> std::string {
-    return C::description();
+constexpr auto get_description = []<Cnstr C>() -> std::string_view {
+    return C::description;
 };
 
-constexpr auto name = []<Cnstr C>() -> const char * {
-        return C::name();
+constexpr auto get_name = []<Cnstr C>() -> std::string_view {
+        return C::name;
 };
 
-/* Maybe change to struct with operator() */
-// struct nameT {
-//     template <Cnstr C>
-//     auto operator()() const {
-//         return C::name();
-//     }
-// };
-// 
-// struct descriptionT {
-//     template <Cnstr C>
-//     auto operator()(std::string_view lang = "en") const {
-//         if (lang == "rs") {
-//             return C::description_rs();
-//         } else /* if lang en */ {
-//             return C::description();
-//         }
-//     }
-// };
-// 
-// constexpr auto name = nameT{};
-// constexpr auto description = descriptionT{};
-
-}
+} // ns rs::cnstr
 
 #endif // CNSTR_HPP
