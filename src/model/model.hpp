@@ -227,6 +227,12 @@ struct Model {
          });
         return result_map;
     }
+
+    nlohmann::json json() const {
+        nlohmann::json j;
+        to_json(j, static_cast<Derived const&>(*this));
+        return j;
+    }
 };
 
 struct Empty final : Model<Empty> {};
