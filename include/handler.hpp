@@ -31,17 +31,17 @@ public:
         } catch(const rs::Error &e) {
              return req->create_response(e.status())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
-                        .set_body(nlohmann::json(e).dump())
+                        .set_body(e.json().dump())
                         .done();
         } catch (const soci::soci_error &e) {
              return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
-                    .set_body(nlohmann::json(rs::make_error<rs::DBError>(e.get_error_message())).dump())
+                    .set_body(rs::DBError(e.get_error_message()).json().dump())
                     .done();
         } catch (const std::exception &e) {
              return req->create_response(restinio::status_internal_server_error())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
-                        .set_body(nlohmann::json(rs::make_error<rs::OtherError>(e.what())).dump())
+                        .set_body(rs::OtherError(e.what()).json().dump())
                         .done();
         } catch (...) {
             return req->create_response(restinio::status_internal_server_error())
