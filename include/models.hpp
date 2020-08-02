@@ -7,7 +7,7 @@
 namespace rs::model {
 
 /* Models for Database */
-struct User final : public Model<User> {
+struct User final : Model<User> {
     Field<int32_t,cnstr::Unique> id;
     Field<std::string, cnstr::Unique, cnstr::Length<1,10>, cnstr::Required> username;
     Field<std::string, cnstr::Required, cnstr::Length<6,255>> password;
@@ -21,7 +21,7 @@ struct User final : public Model<User> {
 };
 
 /* Request Parameters Models */
-struct Id final : public Model<Id> {
+struct Id final : Model<Id> {
     Field<int32_t> id;
 }; 
 

@@ -1,19 +1,12 @@
 #ifndef RS_ERRORS_HPP
 #define RS_ERRORS_HPP
 
-#include "typedefs.hpp"
 #include <string_view>
+#include <concepts>
+
+#include "typedefs.hpp"
 
 namespace rs {
-
-/* Compile type concept (trait) for what is Error */
-template<typename E>
-concept CError = requires(E e) {
-    { e.what() } -> std::convertible_to<const char *>;
-    { e.id() } -> std::convertible_to<std::string_view>;
-    { e.msg() } -> std::convertible_to<std::string_view>;
-    { e.status() } -> std::convertible_to<restinio::http_status_line_t>;
-};
 
 struct Error : std::exception {
     nlohmann::json info;
@@ -38,6 +31,10 @@ struct Error : std::exception {
 protected:
     virtual ~Error() = default;
 };
+
+/* Compile type concept (trait) for what is Error */
+template<typename E>
+concept CError = std::same_as<E, Error> || std::derived_from<E, Error>;
 
 struct OtherError final : Error {
     using Error::Error;

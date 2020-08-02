@@ -18,7 +18,7 @@
 namespace rs::model {
 
 template <class Derived>
-class Model;
+struct Model;
 
 template<typename C>
 concept CModel = std::derived_from<C,Model<C>>;
@@ -122,8 +122,7 @@ public:
 };
 
 template <class Derived>
-class Model {
-public:
+struct Model {
     constexpr auto get_field(std::string_view field_name) const {
         Derived const& model = static_cast<Derived const&>(*this);
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
@@ -230,7 +229,7 @@ public:
     }
 };
 
-struct Empty final : public Model<Empty> {};
+struct Empty final : Model<Empty> {};
 
 void from_json(const nlohmann::json&, Empty&) {};
 void to_json(nlohmann::json&, const Empty&) {};

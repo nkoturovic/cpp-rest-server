@@ -46,7 +46,7 @@ public:
         } catch (...) {
             return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
-                    .set_body(R"({ "message" : "Internal error" })")
+                    .set_body(rs::OtherError().json().dump())
                     .done();
        }
     }
