@@ -1,5 +1,5 @@
 #include <fstream>
-#include "typedefs.hpp"
+#include <nlohmann/json.hpp>
 
 namespace rs {
 class ServerConfig {

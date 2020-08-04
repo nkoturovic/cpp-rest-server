@@ -1,6 +1,7 @@
 #ifndef RS_ROUTES_HPP
 #define RS_ROUTES_HPP
 
+#include <restinio/router/easy_parser_router.hpp>
 #include "handler.hpp"
 #include "models.hpp"
 #include "utils.hpp"
@@ -8,16 +9,18 @@
 
 namespace rs {
 
-inline void register_routes(rs::router_t &router, soci::session &db) {
+inline void register_routes(restinio::router::easy_parser_router_t &router, soci::session &db) 
+{
+    namespace epr = restinio::router::easy_parser_router;
 
-    router.http_get(rs::epr::path_to_params("/api/users"),
+    router.http_get(epr::path_to_params("/api/users"),
             rs::make_handler([&db](rs::model::Empty&&) -> nlohmann::json {
                 return rs::actions::get_models_from_db<rs::model::User>(db, "users");
             })
     );
 
-    router.http_get(rs::epr::path_to_params("/api/users/", 
-            rs::epr::non_negative_decimal_number_p<std::uint64_t>()),
+    router.http_get(epr::path_to_params("/api/users/", 
+            epr::non_negative_decimal_number_p<std::uint64_t>()),
             rs::make_handler([&db](rs::model::Id&& req_params, std::uint64_t id) -> nlohmann::json {
             if (req_params.id.has_value())
                 std::cout << req_params.id.value() << std::endl;
@@ -30,9 +33,9 @@ inline void register_routes(rs::router_t &router, soci::session &db) {
        })
     );
 
-    router.http_post(rs::epr::path_to_params("/api/users"), 
+    router.http_post(epr::path_to_params("/api/users"), 
         rs::make_handler([&db](rs::model::User &&user) -> nlohmann::json {
-            auto errs = user.get_unsatisfied_constraints().transform(cnstr::get_description);
+            auto errs = user.get_unsatisfied_constraints().transform(rs::model::cnstr::get_description);
             rs::throw_if<rs::InvalidParamsError>(errs.size(), std::move(errs)); 
             auto duplicates = rs::actions::check_uniquenes_in_db(db, "users", user);
             nlohmann::json err_msg; 

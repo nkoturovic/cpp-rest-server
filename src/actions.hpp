@@ -5,14 +5,13 @@
 #include <map>
 #include <boost/algorithm/string/join.hpp>
 
-#include "typedefs.hpp"
 #include "errors.hpp"
 #include "model/model.hpp"
 
 namespace rs::actions {
 
 std::vector<std::string> check_uniquenes_in_db(soci::session &db, std::string_view table_name, rs::model::CModel auto const& m) {
-    auto us = m.unique_cnstr_fields();
+    auto us = m.get_unique_cnstr_fields();
     std::vector<std::string> duplicates;
     for (int count; auto &&[k,v] : us) {
          count = 0;
@@ -49,6 +48,6 @@ void insert_model_into_db(soci::session &db, std::string_view table_name, rs::mo
     db << "INSERT INTO " << table_name << "(" << names_str << ")" << " VALUES(" <<  values_str << ")";
 }
 
-}
+} // ns rs::actions
 
 #endif // RS_ACTIONS_HPP

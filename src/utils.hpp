@@ -1,7 +1,6 @@
 #ifndef RS_UTILS_HPP
 #define RS_UTILS_HPP
 
-#include "typedefs.hpp"
 #include "model/model.hpp"
 #include "errors.hpp"
 #include "actions.hpp"

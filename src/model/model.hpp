@@ -7,13 +7,31 @@
 #include <type_traits>
 
 #include <boost/hana/ext/std/tuple.hpp>
-
+#include <boost/lexical_cast.hpp>
 #include <nlohmann/json.hpp>
 #include <soci/soci.h>
+#include <fmt/format.h>
 
 #include "3rd_party/refl.hpp"
 #include "model/constraint.hpp"
-#include "typedefs.hpp"
+
+/* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
+namespace boost {
+    template<> 
+    bool lexical_cast<bool, std::string>(const std::string& arg) {
+        std::istringstream ss(arg);
+        bool b;
+        ss >> std::boolalpha >> b;
+        return b;
+    }
+
+    template<>
+    std::string lexical_cast<std::string, bool>(const bool& b) {
+        std::ostringstream ss;
+        ss << std::boolalpha << b;
+        return ss.str();
+    }
+}
 
 namespace rs::model {
 
@@ -215,7 +233,7 @@ struct Model {
         }));
     }
 
-    std::map<std::string,std::string> unique_cnstr_fields() const {
+    std::map<std::string,std::string> get_unique_cnstr_fields() const {
         Derived const& model = static_cast<Derived const&>(*this);
          std::map<std::string, std::string> result_map;
          refl::util::for_each(refl::reflect(model).members, [&](auto member) {

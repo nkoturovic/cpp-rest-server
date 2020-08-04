@@ -18,10 +18,10 @@ soci_example.o: examples/soci_example.cpp
 json_example.out: json_example.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LFLAGS)
 
-json_example.o: src/json_example.cpp
+json_example.o: examples/json_example.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-main.o: main.cpp src/handler.hpp src/actions.hpp
+main.o: src/main.cpp src/handler.hpp src/actions.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 .PHONY: clean dist

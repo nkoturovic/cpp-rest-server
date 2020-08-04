@@ -2,6 +2,9 @@
 #include <nlohmann/json.hpp>
 #include "models.hpp" // rs::User
 
+#include <fmt/format.h>
+#include <nlohmann/json.hpp>
+
 int main()
 {
     rs::model::User kotur {
@@ -20,9 +23,9 @@ int main()
     std::cout << nlohmann::json(kotur).dump(2) << '\n';
 
     /* Izvlacenje OPISA nezadovoljenih CONSTRAINT-ova */
-    if (auto ds_map = kotur.unsatisfied_constraints()
-                           .transform(rs::cnstr::description); ds_map.size())
-        std::cout << rs::json_t(ds_map).dump(2) << '\n';
+    if (auto ds_map = kotur.get_unsatisfied_constraints()
+                           .transform(rs::model::cnstr::get_description); ds_map.size())
+        std::cout << nlohmann::json(ds_map).dump(2) << '\n';
 
     return 0;
 }

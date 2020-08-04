@@ -2,7 +2,6 @@
 #include <soci/sqlite3/soci-sqlite3.h>
 
 #include "routes.hpp"
-#include "typedefs.hpp"
 #include "utils.hpp"
 #include "config.hpp"
 #include "3rd_party/color.hpp"
@@ -13,7 +12,7 @@ int main()
 {
     rs::ServerConfig server_cfg("config/server_config.json");
     soci::session db(soci::sqlite3, "dbname=db.sqlite");
-    auto router = std::make_unique<rs::router_t>();
+    auto router = std::make_unique<restinio::router::easy_parser_router_t>();
 
     rs::register_routes(*router, db);
 
@@ -32,12 +31,12 @@ int main()
         restinio::traits_t<
             restinio::asio_timer_manager_t,
             restinio::null_logger_t,
-            rs::router_t>;
+            restinio::router::easy_parser_router_t>;
 
     restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
-                  .address(server_cfg.ip())
-                  .port(server_cfg.port())
-                  .request_handler(std::move(router)));
+                 .address(server_cfg.ip())
+                 .port(server_cfg.port())
+                 .request_handler(std::move(router)));
 
     return 0;
 }

@@ -6,8 +6,7 @@
 
 #include "constraint.hpp"
 
-
-namespace rs {
+namespace rs::model {
 
 template <typename T, cnstr::Cnstr ...Cs>
 class Field {
@@ -56,6 +55,6 @@ public:
     }
 };
 
-} // ns rs
+} // ns rs::model
 
 #endif // RS_FIELD_HPP

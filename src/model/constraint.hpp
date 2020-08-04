@@ -39,7 +39,7 @@ constexpr auto to_hana_string(X /*x*/) {
 }
 }
 
-namespace rs::cnstr {
+namespace rs::model::cnstr {
 
 /* Compile type concept (trait) for what is Constraint */
 template<typename C>
@@ -131,6 +131,6 @@ constexpr auto get_name = []<Cnstr C>() -> std::string_view {
         return C::name;
 };
 
-} // ns rs::cnstr
+} // ns rs::model::cnstr
 
 #endif // CNSTR_HPP
