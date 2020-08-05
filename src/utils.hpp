@@ -24,7 +24,7 @@ constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
         throw E(std::move(info));
 }
 
-/* Parse aditional args (used in handlers.hpp): 
+/* Parse additional args (used in handlers.hpp):
  * for GET: ?name=example ...
  * for POST: body */
 template <model::CModel RequestParamsModel>

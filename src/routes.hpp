@@ -36,11 +36,11 @@ inline void register_routes(restinio::router::easy_parser_router_t &router, soci
     router.http_post(epr::path_to_params("/api/users"), 
         rs::make_handler([&db](rs::model::User &&user) -> nlohmann::json {
             auto errs = user.get_unsatisfied_constraints().transform(rs::model::cnstr::get_description);
-            rs::throw_if<rs::InvalidParamsError>(errs.size(), std::move(errs)); 
+            rs::throw_if<rs::InvalidParamsError>(!errs.empty(), std::move(errs));
             auto duplicates = rs::actions::check_uniquenes_in_db(db, "users", user);
             nlohmann::json err_msg; 
             for (const auto &d : duplicates) err_msg[d] = "Already exist in db";
-            rs::throw_if<rs::InvalidParamsError>(duplicates.size(), std::move(err_msg));
+            rs::throw_if<rs::InvalidParamsError>(!duplicates.empty(), std::move(err_msg));
             rs::actions::insert_model_into_db<rs::model::User>(db, "users", std::move(user));
             return rs::success_response("Model successfully inserted into db");
         })

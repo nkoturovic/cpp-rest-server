@@ -11,7 +11,7 @@ template <class Func, model::CModel RequestParamsModel>
 class Handler {
     Func m_handler;
 public:
-    Handler(Func &&func) : m_handler(std::move(func)) { }
+    explicit Handler(Func &&func) : m_handler(std::move(func)) { }
     ~Handler() = default;
 
         template <typename... RouteParams>

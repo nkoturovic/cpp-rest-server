@@ -142,7 +142,7 @@ public:
 template <class Derived>
 struct Model {
     constexpr auto get_field(std::string_view field_name) const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
                 if (member.name.str() == field_name) {
@@ -154,7 +154,7 @@ struct Model {
 
     template <typename T>
     bool set_field(std::string_view field_name, T &&value) {
-        Derived& model = static_cast<Derived&>(*this);
+        auto& model = static_cast<Derived&>(*this);
         bool result = false;
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             using field_type = typename std::remove_cvref_t<decltype(member(model))>::value_type;
@@ -179,28 +179,28 @@ struct Model {
         return result;
     }
         constexpr auto fields() const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
                return member(model);
         });
     }
 
     constexpr auto field_names() const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_array<std::string>(refl::reflect(model).members, [](auto member) {
                    return member.name.str();
         });
     }
 
     constexpr auto field_values() const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
                 return member(model).opt_value();
         });
     }
 
     auto fields_with_value_str() const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         auto names = model.field_names();
         auto opt_values = model.field_values_str();
         std::vector<std::string> ns; ns.reserve(names.size());
@@ -216,7 +216,7 @@ struct Model {
     }
 
     constexpr auto field_values_str() const {
-         Derived const& model = static_cast<Derived const&>(*this);
+         auto const& model = static_cast<Derived const&>(*this);
          return refl::util::map_to_array<std::optional<std::string>>(refl::reflect(model).members, [&model](auto member) {
                 if (auto field = member(model); field.has_value())
                     return std::make_optional<std::string>(fmt::format("{}", std::move(field.value())));
@@ -227,16 +227,16 @@ struct Model {
 
 
     auto get_unsatisfied_constraints() const {
-        Derived const& model = static_cast<Derived const&>(*this);
+        auto const& model = static_cast<Derived const&>(*this);
         return ModelConstraintsWrapper(refl::util::map_to_tuple(refl::reflect(model).members, [&](auto member) {
                 return std::pair {member.name.str(), member(model).unsatisfied_constraints};
         }));
     }
 
     std::map<std::string,std::string> get_unique_cnstr_fields() const {
-        Derived const& model = static_cast<Derived const&>(*this);
-         std::map<std::string, std::string> result_map;
-         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+        auto const& model = static_cast<Derived const&>(*this);
+        std::map<std::string, std::string> result_map;
+        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
                 if (auto field = member(model); field.has_value() && field.unique()) {
                     result_map.insert({member.name.str(), fmt::format("{}", field.value())});
