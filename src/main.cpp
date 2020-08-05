@@ -3,14 +3,16 @@
 
 #include "routes.hpp"
 #include "utils.hpp"
-#include "config.hpp"
 #include "3rd_party/color.hpp"
 
 using namespace restinio;
 
-int main() 
+int main(int argc, char * argv[])
 {
-    rs::ServerConfig server_cfg("config/server_config.json");
+    /* Address:port will be moved in some kind of config file */
+    const char * server_address = "localhost";
+    unsigned server_port = 3000;
+
     soci::session db(soci::sqlite3, "dbname=db.sqlite");
     auto router = std::make_unique<restinio::router::easy_parser_router_t>();
 
@@ -25,7 +27,7 @@ int main()
         });
 
     fmt::print("{}Server running on port {}{}{}\n", 
-                  COLOR_GRN, COLOR_YEL, server_cfg.port(), COLOR_DEF);
+                  COLOR_GRN, COLOR_YEL, server_port, COLOR_DEF);
 
     using traits_t =
         restinio::traits_t<
@@ -34,8 +36,8 @@ int main()
             restinio::router::easy_parser_router_t>;
 
     restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
-                 .address(server_cfg.ip())
-                 .port(server_cfg.port())
+                 .address(server_address)
+                 .port(server_port)
                  .request_handler(std::move(router)));
 
     return 0;
