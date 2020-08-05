@@ -123,7 +123,7 @@ class ModelConstraintsWrapper {
 private:
     std::tuple<Ts...> cs;
 public:
-    ModelConstraintsWrapper(std::tuple<Ts...> &&t) : cs(std::move(t)) {}
+    explicit ModelConstraintsWrapper(std::tuple<Ts...> &&t) : cs(std::move(t)) {}
 
     template <typename Func, typename ... Args>
     auto transform(Func && f, Args &&...args) const {
@@ -141,7 +141,7 @@ public:
 
 template <class Derived>
 struct Model {
-    constexpr auto get_field(std::string_view field_name) const {
+    [[nodiscard]] constexpr auto get_field(std::string_view field_name) const {
         auto const& model = static_cast<Derived const&>(*this);
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
@@ -161,7 +161,7 @@ struct Model {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
                 if (member.name.str() == field_name) {
                     if constexpr (std::is_convertible_v<T, field_type>) {
-                        member(model).set_value(std::move(value));
+                        member(model).set_value(std::forward<T>(value));
                         result = true;
                         return;
                     } else {
@@ -178,28 +178,28 @@ struct Model {
         });
         return result;
     }
-        constexpr auto fields() const {
+        [[nodiscard]] constexpr auto fields() const {
         auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
                return member(model);
         });
     }
 
-    constexpr auto field_names() const {
+    [[nodiscard]] constexpr auto field_names() const {
         auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_array<std::string>(refl::reflect(model).members, [](auto member) {
                    return member.name.str();
         });
     }
 
-    constexpr auto field_values() const {
+    [[nodiscard]] constexpr auto field_values() const {
         auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
                 return member(model).opt_value();
         });
     }
 
-    auto fields_with_value_str() const {
+    [[nodiscard]] auto fields_with_value_str() const {
         auto const& model = static_cast<Derived const&>(*this);
         auto names = model.field_names();
         auto opt_values = model.field_values_str();
@@ -215,7 +215,7 @@ struct Model {
         return std::pair{ns, vs};
     }
 
-    constexpr auto field_values_str() const {
+    [[nodiscard]] constexpr auto field_values_str() const {
          auto const& model = static_cast<Derived const&>(*this);
          return refl::util::map_to_array<std::optional<std::string>>(refl::reflect(model).members, [&model](auto member) {
                 if (auto field = member(model); field.has_value())
@@ -226,14 +226,14 @@ struct Model {
     }
 
 
-    auto get_unsatisfied_constraints() const {
+    [[nodiscard]] auto get_unsatisfied_constraints() const {
         auto const& model = static_cast<Derived const&>(*this);
         return ModelConstraintsWrapper(refl::util::map_to_tuple(refl::reflect(model).members, [&](auto member) {
                 return std::pair {member.name.str(), member(model).unsatisfied_constraints};
         }));
     }
 
-    std::map<std::string,std::string> get_unique_cnstr_fields() const {
+    [[nodiscard]] std::map<std::string,std::string> get_unique_cnstr_fields() const {
         auto const& model = static_cast<Derived const&>(*this);
         std::map<std::string, std::string> result_map;
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
@@ -246,7 +246,7 @@ struct Model {
         return result_map;
     }
 
-    nlohmann::json json() const {
+    [[nodiscard]] nlohmann::json json() const {
         nlohmann::json j;
         to_json(j, static_cast<Derived const&>(*this));
         return j;

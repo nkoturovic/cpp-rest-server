@@ -38,7 +38,7 @@ public:
     } unsatisfied_constraints{m_value};
 
     Field() = default;
-    Field(T &&value) 
+    explicit Field(T &&value)
         : m_value(std::move(value)) {}
 
     constexpr const T& value() const { return m_value.value(); }
@@ -48,9 +48,9 @@ public:
 
     void set_value(T&& value) { m_value = std::move(value); }
     void erase_value() { m_value = { std::nullopt }; }
-    bool has_value() const { return m_value.has_value(); }
+    [[nodiscard]] bool has_value() const { return m_value.has_value(); }
 
-    bool unique() const {
+    [[nodiscard]] bool unique() const {
         return hana::contains(cnstr_list, hana::type_c<cnstr::Unique>);
     }
 };
