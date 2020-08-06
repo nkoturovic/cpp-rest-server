@@ -20,7 +20,7 @@ int main()
     std::cout << kotur << '\n';
 
     /* from_json, to_json su automatski impl. */
-    std::cout << nlohmann::json(kotur).dump(2) << '\n';
+    std::cout << kotur.json().dump(2) << '\n';
 
     /* Izvlacenje OPISA nezadovoljenih CONSTRAINT-ova */
     if (auto ds_map = kotur.get_unsatisfied_constraints()

@@ -38,7 +38,7 @@ public:
     } unsatisfied_constraints{m_value};
 
     Field() = default;
-    explicit Field(T &&value)
+    Field(T &&value)
         : m_value(std::move(value)) {}
 
     constexpr const T& value() const { return m_value.value(); }
