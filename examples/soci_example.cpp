@@ -22,8 +22,7 @@ int main()
     // izvlacimo sve usere dok ih ima
     while (getUsersStmt.fetch()) {
         user.id.erase_value(); // brisemo id (ne sme videti korisnik npr.)
-        nlohmann::json j(user); // pretvaramo u json
-        std::cout << j << '\n'; // stampamo
+        std::cout << user.json().dump(2) << '\n'; // stampamo
         // Pretvaramo u mapu i iteriramo [k,v]
         auto [ks,vs] = user.fields_with_value_str();
         for (unsigned i = 0; i < ks.size(); i++) {
