@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-
-# Project 11-PhotoWall
-
-Platforma za postavljanje i preuzimanje fotografija, crteža i drugih oblika računarske grfike. Korisnici moraju biti registrovani da bi dodali fotografije. Prilikom dodavanja može se izvršiti jednostavnija obrada fotografija. 
-
-## Developers
-
-- [Miloš Krsmanović, 263/2015](https://gitlab.com/milos143)
-- [Filip Šašić, 135/2015](https://gitlab.com/sasicf)
-- [Anđela Karakaš, 86/2015](https://gitlab.com/AndjelaKarakas)
-- [Bojan Stefanović, 22/2015](https://gitlab.com/mi15022)
-- [Nebojša Koturović, 139/2015](https://gitlab.com/nkoturovic)
-=======
 # C++ REST Server 
 
 ## Dependencies
@@ -146,4 +132,3 @@ while (getUsersStmt.fetch())
 ## Using and building APP
 
 Comming soon, stay tuned.
->>>>>>> cpp-rest-server/master
