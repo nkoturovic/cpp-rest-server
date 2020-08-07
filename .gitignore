@@ -1,0 +1,5 @@
+*.o
+*.out
+.idea
+compile_commands.json
+*build*
