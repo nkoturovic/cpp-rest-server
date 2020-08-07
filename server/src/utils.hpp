@@ -1,6 +1,7 @@
 #ifndef RS_UTILS_HPP
 #define RS_UTILS_HPP
 
+#include <span>
 #include "model/model.hpp"
 #include "errors.hpp"
 #include "actions.hpp"
@@ -54,6 +55,27 @@ RequestParamsModel extract_request_params_model(const auto &req) {
         }
     }
 }
+
+struct CmdLineArgs {
+    const char * ip = "localhost";
+    unsigned port = 3000;
+};
+
+CmdLineArgs parse_cmdline_args(std::span<char *> args) 
+{
+    CmdLineArgs result{};
+    auto end = std::cend(args);
+
+    for (auto it = std::cbegin(args); it != end; it++) {
+        auto next = std::next(it);
+        std::string_view curr{*it};
+        if ((curr == "--ip" || curr == "-i") && next != end)
+            result.ip = *next;
+        else if ((curr == "--port" || curr == "-p") && next != end)
+            result.port = std::strtoul(*next, nullptr, 10);
+    }
+    return result;
+};
 
 template <typename T>
 struct function_traits

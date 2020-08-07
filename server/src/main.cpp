@@ -1,6 +1,7 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
 
+#include <span>
 #include "routes.hpp"
 #include "utils.hpp"
 #include "3rd_party/color.hpp"
@@ -10,8 +11,7 @@ using namespace restinio;
 int main(int argc, char * argv[])
 {
     /* Address:port will be moved in some kind of config file */
-    const char * server_address = "localhost";
-    unsigned server_port = 3000;
+    const auto [server_address, server_port] = rs::parse_cmdline_args(std::span(argv, argc));
 
     soci::session db(soci::sqlite3, "dbname=db.sqlite");
     auto router = std::make_unique<restinio::router::easy_parser_router_t>();
@@ -26,8 +26,8 @@ int main(int argc, char * argv[])
                        .done();
         });
 
-    fmt::print("{}Server running on port {}{}{}\n", 
-                  COLOR_GRN, COLOR_YEL, server_port, COLOR_DEF);
+    fmt::print("{}Server running on {}{}:{}{}\n", 
+                  COLOR_GRN, COLOR_YEL, server_address, server_port, COLOR_DEF);
 
     using traits_t =
         restinio::traits_t<
