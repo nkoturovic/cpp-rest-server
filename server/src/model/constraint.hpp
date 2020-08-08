@@ -77,7 +77,7 @@ struct Unique {
     }
 
    constexpr static std::string_view name = "Unique";
-   constexpr static std::string_view description = "Not Available";
+   constexpr static std::string_view description = "Unique";
 };
 /* ------------ String ----------- */
 struct NotEmpty {
@@ -98,9 +98,10 @@ struct Length {
     constexpr static int to = to_;
 
     constexpr static bool is_satisfied(std::string_view s) {
-        return (s.length() >= from) && (s.length() <= to);
+        return (s.length() >= from) && (s.length() <= to) ;
     }
-    constexpr static std::string_view name = "Length";
+    constexpr static std::string_view name = (BOOST_HANA_STRING("Length(") + rs::to_hana_string(hana::int_c<from>) + BOOST_HANA_STRING(",")
+                                                                          + rs::to_hana_string(hana::int_c<to>) + BOOST_HANA_STRING(")")).c_str();
     constexpr static std::string_view description = (BOOST_HANA_STRING("Length should be from ") + rs::to_hana_string(hana::int_c<from>) + 
                                                      BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
 };
@@ -118,7 +119,9 @@ struct Between {
         return (x >= from) && (x <= to);
     }
 
-    constexpr static std::string_view name = "Between";
+    constexpr static std::string_view name = (BOOST_HANA_STRING("Between(") + rs::to_hana_string(hana::int_c<from>) + BOOST_HANA_STRING(",")
+                                                                          + rs::to_hana_string(hana::int_c<to>) + BOOST_HANA_STRING(")")).c_str();
+
     constexpr static std::string_view description = (BOOST_HANA_STRING("Value should be in range from ") + rs::to_hana_string(hana::int_c<from>) + 
                                                      BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
 };

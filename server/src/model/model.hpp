@@ -33,6 +33,21 @@ namespace boost {
     }
 }
 
+namespace rs {
+template <typename T> constexpr std::string_view type_name;
+template <> constexpr std::string_view type_name<int> = "int";
+template <> constexpr std::string_view type_name<char> = "char";
+template <> constexpr std::string_view type_name<long> = "long int";
+template <> constexpr std::string_view type_name<unsigned> = "unsigned int";
+template <> constexpr std::string_view type_name<unsigned long> = "unsigned long int";
+template <> constexpr std::string_view type_name<float> = "float";
+template <> constexpr std::string_view type_name<double> = "double";
+template <> constexpr std::string_view type_name<bool> = "bool";
+template <> constexpr std::string_view type_name<std::string> = "string";
+template <> constexpr std::string_view type_name<std::string_view> = "string";
+template <> constexpr std::string_view type_name<const char *> = "string";
+}
+
 namespace rs::model {
 
 template <class Derived>
@@ -139,6 +154,17 @@ public:
     }
 };
 
+struct ModelFieldDescription {
+    std::string_view type;
+    std::vector<std::string_view> cnstr_names;
+};
+
+void to_json(nlohmann::json& j, const ModelFieldDescription& pd) {
+    j["type"] = pd.type;
+    j["constraints"] = nlohmann::json(pd.cnstr_names);
+};
+
+
 template <class Derived>
 struct Model {
     [[nodiscard]] constexpr auto get_field(std::string_view field_name) const {
@@ -190,6 +216,22 @@ struct Model {
         return refl::util::map_to_array<std::string>(refl::reflect(model).members, [](auto member) {
                    return member.name.str();
         });
+    }
+
+    [[nodiscard]] static auto get_description() {
+        Derived model{};
+        std::map<std::string, ModelFieldDescription> result;
+
+        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+            using member_type = std::remove_cvref_t<decltype(member(model))>;
+            using field_type = typename member_type::value_type;
+            if constexpr (refl::trait::is_field<decltype(member)>()) {
+                result[member.name.str()] = ModelFieldDescription{ type_name<field_type>, hana::unpack(member_type::cnstr_list, []<typename ...X>(X ...x) {
+                        return std::vector<std::string_view>{cnstr::get_name.template operator()<typename X::type>()...};
+                })}; 
+            }
+        });
+        return result;
     }
 
     [[nodiscard]] constexpr auto field_values() const {
@@ -259,5 +301,9 @@ void from_json(const nlohmann::json&, Empty&) {};
 void to_json(nlohmann::json&, const Empty&) {};
 
 }
+
+REFL_AUTO(
+    type(rs::model::Empty)
+)
 
 #endif //RS_MODEL_BASE_HPP

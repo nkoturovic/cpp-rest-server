@@ -11,16 +11,18 @@ template <class Func, model::CModel RequestParamsModel>
 class Handler {
     Func m_handler;
 public:
+    using request_params_model_t = RequestParamsModel;
+
     explicit Handler(Func &&func) : m_handler(std::move(func)) { }
     ~Handler() = default;
 
         template <typename... RouteParams>
-        restinio::request_handling_status_t operator()(restinio::request_handle_t req, RouteParams...routeparams) const {
+        restinio::request_handling_status_t operator()(const restinio::request_handle_t &req, RouteParams&& ...routeparams) const {
         try {
             nlohmann::json resp_json;
             nlohmann::json json_req = rs::extract_request_params_model<RequestParamsModel>(req);
             RequestParamsModel pars(std::move(json_req));
-            resp_json = m_handler(std::move(pars), routeparams...);
+            resp_json = m_handler(std::move(pars), std::forward<RouteParams>(routeparams)...);
 
         return req->create_response(restinio::status_ok())
                    .append_header(restinio::http_field::content_type, "application/json")
