@@ -1,17 +1,44 @@
 #ifndef RS_UTILS_HPP
 #define RS_UTILS_HPP
 
+#include <string_view>
 #include <span>
 #include <restinio/router/easy_parser_router.hpp>
 
-#include "model/model.hpp"
 #include "errors.hpp"
-#include "actions.hpp"
+#include <boost/lexical_cast.hpp>
 
-#include <boost/hana.hpp>
-namespace hana = boost::hana;
+/* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
+namespace boost {
+    template<> 
+    bool lexical_cast<bool, std::string>(const std::string& arg) {
+        std::istringstream ss(arg);
+        bool b;
+        ss >> std::boolalpha >> b;
+        return b;
+    }
+
+    template<>
+    std::string lexical_cast<std::string, bool>(const bool& b) {
+        std::ostringstream ss;
+        ss << std::boolalpha << b;
+        return ss.str();
+    }
+}
 
 namespace rs {
+template <typename T> constexpr std::string_view type_name;
+template <> constexpr std::string_view type_name<int> = "int";
+template <> constexpr std::string_view type_name<char> = "char";
+template <> constexpr std::string_view type_name<long> = "long int";
+template <> constexpr std::string_view type_name<unsigned> = "unsigned int";
+template <> constexpr std::string_view type_name<unsigned long> = "unsigned long int";
+template <> constexpr std::string_view type_name<float> = "float";
+template <> constexpr std::string_view type_name<double> = "double";
+template <> constexpr std::string_view type_name<bool> = "bool";
+template <> constexpr std::string_view type_name<std::string> = "string";
+template <> constexpr std::string_view type_name<std::string_view> = "string";
+template <> constexpr std::string_view type_name<const char *> = "string";
 
 nlohmann::json success_response(std::string_view info = "") {
     nlohmann::json json;
@@ -25,37 +52,6 @@ template <CError E>
 constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
     if (condition)
         throw E(std::move(info));
-}
-
-/* Parse additional args (used in handlers.hpp):
- * for GET: ?name=example ...
- * for POST: body */
-template <model::CModel RequestParamsModel>
-RequestParamsModel extract_request_params_model(const auto &req) {
-    if constexpr (std::is_same_v<RequestParamsModel, model::Empty>) {
-        return model::Empty{};
-    } else { 
-        auto req_method = req->header().method();
-        if (req_method == restinio::http_method_get()) {
-            RequestParamsModel params;
-            for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
-                auto key_str = fmt::format("{}", k);
-                params.set_field(key_str, std::string(v));
-            }
-            return params;
-        } else /* if (req_method == restinio::http_method_post()) */ {
-            try {
-                auto src = req->body();
-                if (src.empty()) {
-                    return RequestParamsModel{};
-                } else {
-                    return RequestParamsModel(nlohmann::json::parse(src));
-                }
-            } catch (const nlohmann::json::parse_error &perror) {
-                throw rs::JsonParseError(perror.what());
-            }
-        }
-    }
 }
 
 struct CmdLineArgs {
@@ -103,32 +99,32 @@ struct function_traits<ReturnType(ClassType::*)(Args...) const>
     };
 };
 
-void register_api_reference_route(const auto &router) {
-    router.router_instance->http_get(restinio::router::easy_parser_router::path_to_params("/api/help"), 
-            [&](const auto &req) {
-                std::string content = {"<!DOCTYPE html><html></body><h1>Api reference</h1>"};
-                for (const auto &r : router.registered_routes_info) {
-                    content.append(fmt::format("<b>{}</b>:&nbsp;&nbsp;{}<br><code>", r.method_id, r.url));
-                    for (const auto &[k,v] : r.params_description) {
-                        content.append(fmt::format("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{} : {} &lt;", k, v.type));
-                        if (v.cnstr_names.begin() != v.cnstr_names.end()) {
-                            content.append(std::accumulate(v.cnstr_names.begin() + 1, 
-                                            v.cnstr_names.end(), 
-                                            std::string{*v.cnstr_names.begin()}, 
-                                            [](std::string acc, std::string_view s) {
-                                               return acc + ", " + std::string(s); 
-                                            }
-                            ));
-                        }
-                        content.append("&gt;<br>");
+void register_api_reference_route(auto &router, std::string_view path) {
+    router.epr->http_get(restinio::router::easy_parser_router::path_to_params(path), 
+        [&](const auto &req) {
+            std::string content = {"<!DOCTYPE html><html></body><h1>API reference</h1>"};
+            for (const auto &r : router.registered_routes_info) {
+                content.append(fmt::format("<b>{}</b>:&nbsp;&nbsp;{}<br><code>", r.method_id, r.url));
+                for (const auto &[k,v] : r.params_description) {
+                    content.append(fmt::format("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{} : {} &lt;", k, v.type));
+                    if (v.cnstr_names.begin() != v.cnstr_names.end()) {
+                        content.append(std::accumulate(v.cnstr_names.begin() + 1, 
+                                        v.cnstr_names.end(), 
+                                        std::string{*v.cnstr_names.begin()}, 
+                                        [](std::string acc, std::string_view s) {
+                                           return acc + ", " + std::string(s); 
+                                        }
+                        ));
                     }
-                    content.append("</code><br>");
+                    content.append("&gt;<br>");
                 }
-                content.append("</body></html>");
-                return req->create_response(restinio::status_ok())
-                   .append_header(restinio::http_field::content_type, "text/html")
-                   .set_body(content)
-                   .done();
+                content.append("</code><br>");
+            }
+            content.append("</body></html>");
+            return req->create_response(restinio::status_ok())
+               .append_header(restinio::http_field::content_type, "text/html")
+               .set_body(content)
+               .done();
     });
 }
 

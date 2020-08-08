@@ -7,6 +7,37 @@
 
 namespace rs {
 
+/* Parse additional args (used in handlers.hpp):
+ * for GET: ?name=example ...
+ * for POST: body */
+template <model::CModel RequestParamsModel>
+static inline RequestParamsModel extract_request_params_model(const auto &req) {
+    if constexpr (std::is_same_v<RequestParamsModel, model::Empty>) {
+        return model::Empty{};
+    } else { 
+        auto req_method = req->header().method();
+        if (req_method == restinio::http_method_get()) {
+            RequestParamsModel params;
+            for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
+                auto key_str = fmt::format("{}", k);
+                params.set_field(key_str, std::string(v));
+            }
+            return params;
+        } else /* if (req_method == restinio::http_method_post()) */ {
+            try {
+                auto src = req->body();
+                if (src.empty()) {
+                    return RequestParamsModel{};
+                } else {
+                    return RequestParamsModel(nlohmann::json::parse(src));
+                }
+            } catch (const nlohmann::json::parse_error &perror) {
+                throw rs::JsonParseError(perror.what());
+            }
+        }
+    }
+}
+
 template <class Func, model::CModel RequestParamsModel>
 class Handler {
     Func m_handler;

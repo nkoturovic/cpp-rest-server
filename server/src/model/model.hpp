@@ -12,41 +12,10 @@
 #include <soci/soci.h>
 #include <fmt/format.h>
 
+#include "model/field.hpp"
 #include "3rd_party/refl.hpp"
 #include "model/constraint.hpp"
-
-/* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
-namespace boost {
-    template<> 
-    bool lexical_cast<bool, std::string>(const std::string& arg) {
-        std::istringstream ss(arg);
-        bool b;
-        ss >> std::boolalpha >> b;
-        return b;
-    }
-
-    template<>
-    std::string lexical_cast<std::string, bool>(const bool& b) {
-        std::ostringstream ss;
-        ss << std::boolalpha << b;
-        return ss.str();
-    }
-}
-
-namespace rs {
-template <typename T> constexpr std::string_view type_name;
-template <> constexpr std::string_view type_name<int> = "int";
-template <> constexpr std::string_view type_name<char> = "char";
-template <> constexpr std::string_view type_name<long> = "long int";
-template <> constexpr std::string_view type_name<unsigned> = "unsigned int";
-template <> constexpr std::string_view type_name<unsigned long> = "unsigned long int";
-template <> constexpr std::string_view type_name<float> = "float";
-template <> constexpr std::string_view type_name<double> = "double";
-template <> constexpr std::string_view type_name<bool> = "bool";
-template <> constexpr std::string_view type_name<std::string> = "string";
-template <> constexpr std::string_view type_name<std::string_view> = "string";
-template <> constexpr std::string_view type_name<const char *> = "string";
-}
+#include "utils.hpp" // type_name and lexical_cast from true,false : bool
 
 namespace rs::model {
 
@@ -154,17 +123,6 @@ public:
     }
 };
 
-struct ModelFieldDescription {
-    std::string_view type;
-    std::vector<std::string_view> cnstr_names;
-};
-
-void to_json(nlohmann::json& j, const ModelFieldDescription& pd) {
-    j["type"] = pd.type;
-    j["constraints"] = nlohmann::json(pd.cnstr_names);
-};
-
-
 template <class Derived>
 struct Model {
     [[nodiscard]] constexpr auto get_field(std::string_view field_name) const {
@@ -204,7 +162,7 @@ struct Model {
         });
         return result;
     }
-        [[nodiscard]] constexpr auto fields() const {
+    [[nodiscard]] constexpr auto fields() const {
         auto const& model = static_cast<Derived const&>(*this);
         return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
                return member(model);
@@ -220,16 +178,11 @@ struct Model {
 
     [[nodiscard]] static auto get_description() {
         Derived model{};
-        std::map<std::string, ModelFieldDescription> result;
+        std::map<std::string, FieldDescription> result;
 
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-            using member_type = std::remove_cvref_t<decltype(member(model))>;
-            using field_type = typename member_type::value_type;
-            if constexpr (refl::trait::is_field<decltype(member)>()) {
-                result[member.name.str()] = ModelFieldDescription{ type_name<field_type>, hana::unpack(member_type::cnstr_list, []<typename ...X>(X ...x) {
-                        return std::vector<std::string_view>{cnstr::get_name.template operator()<typename X::type>()...};
-                })}; 
-            }
+            if constexpr (refl::trait::is_field<decltype(member)>())
+                result[member.name.str()] = member(model).get_description();
         });
         return result;
     }
