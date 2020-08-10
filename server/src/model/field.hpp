@@ -11,8 +11,8 @@
 namespace rs::model {
 
 struct FieldDescription {
-    std::string_view type;
-    std::vector<std::string_view> cnstr_names;
+    const char * type;
+    std::vector<const char *> cnstr_names;
 };
 
 void to_json(nlohmann::json& j, const FieldDescription& pd) {
@@ -27,6 +27,12 @@ private:
 public:
     using value_type = T;
     constexpr static auto cnstr_list = hana::tuple_t<Cs...>;
+
+    [[nodiscard]] static FieldDescription get_description() {
+        return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...x) {
+            return std::vector<const char *>{cnstr::get_name.template operator()<typename X::type>()...};
+        })}; 
+    }
 
     struct {
         const std::optional<T>& m_value;
@@ -64,12 +70,6 @@ public:
 
     [[nodiscard]] bool unique() const {
         return hana::contains(cnstr_list, hana::type_c<cnstr::Unique>);
-    }
-
-    [[nodiscard]] FieldDescription get_description() {
-        return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...x) {
-            return std::vector<std::string_view>{cnstr::get_name.template operator()<typename X::type>()...};
-        })}; 
     }
 };
 

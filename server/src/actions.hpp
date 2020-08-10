@@ -2,7 +2,6 @@
 #define RS_ACTIONS_HPP
 
 #include <sstream>
-#include <map>
 #include <boost/algorithm/string/join.hpp>
 
 #include "errors.hpp"
@@ -42,8 +41,8 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
 }
 
 void insert_model_into_db(soci::session &db, std::string_view table_name, rs::model::CModel auto &&m) {
-    auto [names, values] = m.fields_with_value_str();
-    auto names_str = boost::algorithm::join(std::move(names), ", ");
+    auto [names, values] = m.field_names_values_str();
+    auto names_str = boost::algorithm::join(names, ", ");
     auto values_str = std::string{"'"}.append(boost::algorithm::join(std::move(values), "', '")).append("'");
     db << "INSERT INTO " << table_name << "(" << names_str << ")" << " VALUES(" <<  values_str << ")";
 }

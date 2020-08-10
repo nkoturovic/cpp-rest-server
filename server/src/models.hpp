@@ -29,7 +29,6 @@ struct Id final : Model<Id> {
 
 /* Required for REFLECTION!! */
 /* Models for Database */
-
 REFL_AUTO(
   type(rs::model::User),
   field(id),
@@ -43,9 +42,6 @@ REFL_AUTO(
   field(join_date),
   field(permission_group)
 )
-
-/* Required to enable automatic reading from sql to model and from model to sql */
-template <> struct soci::type_conversion<rs::model::User> : rs::model::specialize_model<rs::model::User> {};
 
 /* Request Parameters Models */
 REFL_AUTO(

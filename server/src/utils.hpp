@@ -28,17 +28,17 @@ namespace boost {
 
 namespace rs {
 template <typename T> constexpr std::string_view type_name;
-template <> constexpr std::string_view type_name<int> = "int";
-template <> constexpr std::string_view type_name<char> = "char";
-template <> constexpr std::string_view type_name<long> = "long int";
-template <> constexpr std::string_view type_name<unsigned> = "unsigned int";
-template <> constexpr std::string_view type_name<unsigned long> = "unsigned long int";
-template <> constexpr std::string_view type_name<float> = "float";
-template <> constexpr std::string_view type_name<double> = "double";
-template <> constexpr std::string_view type_name<bool> = "bool";
-template <> constexpr std::string_view type_name<std::string> = "string";
-template <> constexpr std::string_view type_name<std::string_view> = "string";
-template <> constexpr std::string_view type_name<const char *> = "string";
+template <> constexpr const char * type_name<int> = "int";
+template <> constexpr const char * type_name<char> = "char";
+template <> constexpr const char * type_name<long> = "long int";
+template <> constexpr const char * type_name<unsigned> = "unsigned int";
+template <> constexpr const char * type_name<unsigned long> = "unsigned long int";
+template <> constexpr const char * type_name<float> = "float";
+template <> constexpr const char * type_name<double> = "double";
+template <> constexpr const char * type_name<bool> = "bool";
+template <> constexpr const char * type_name<std::string> = "string";
+template <> constexpr const char * type_name<std::string_view> = "string";
+template <> constexpr const char * type_name<const char *> = "string";
 
 nlohmann::json success_response(std::string_view info = "") {
     nlohmann::json json;

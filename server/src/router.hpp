@@ -4,7 +4,7 @@
 #include <restinio/router/easy_parser_router.hpp>
 #include <nlohmann/json.hpp>
 #include <boost/hana.hpp>
-#include <handler.hpp>
+#include "handler.hpp"
 namespace hana = boost::hana;
 
 #include "utils.hpp"
@@ -12,8 +12,8 @@ namespace hana = boost::hana;
 namespace rs {
 struct RouteInfo {
     std::string url;
-    restinio::http_method_id_t method_id; 
-    std::map<std::string, rs::model::FieldDescription> params_description;
+    restinio::http_method_id_t method_id;
+    std::unordered_map<const char *, rs::model::FieldDescription> params_description;
 };
 
 void to_json(nlohmann::json &j, const RouteInfo& ri) {
@@ -54,8 +54,8 @@ public:
        auto wrapped_handler = make_handler(std::forward<Handler>(handler));
        using wrapped_handler_t = decltype(wrapped_handler);
 
-       registered_routes_info.emplace_back(
-           url, m, wrapped_handler_t::request_params_model_t::get_description()   
+       registered_routes_info.push_back(
+           RouteInfo { std::move(url), m, wrapped_handler_t::request_params_model_t::get_description() }
        );
 
        this->epr->add_handler(std::forward<MethodMatcher>(m), hana::unpack(cfs, [](auto ...xs) {
