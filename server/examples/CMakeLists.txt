@@ -11,5 +11,5 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../db.sqlite
 
 include_directories(../src)
 
-target_link_libraries(soci_example PRIVATE fmt soci_core soci_sqlite3)
-target_link_libraries(json_example PRIVATE fmt)
+target_link_libraries(soci_example PRIVATE pthread fmt soci_core soci_sqlite3)
+target_link_libraries(json_example PRIVATE pthread fmt)

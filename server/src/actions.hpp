@@ -11,11 +11,19 @@ namespace rs::actions {
 template <rs::model::CModel M>
 std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_view table_name, M const& m) {
     std::vector<const char *> duplicates;
-    for (auto && [n, v] : m.template field_names_str_values_having_cnstr<model::cnstr::Unique>()) {
-        int count = 0;
-        db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, n, std::move(v)), soci::into(count);
-        if (count) duplicates.push_back(n);
-    }
+    std::apply([&](auto&&... fs) { 
+        constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
+        auto i = 0u;
+        (rs::if_else(fs.opt_value.has_value(),
+            [&](auto &&f) { 
+                int count = 0;
+                db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, ns[i], std::move(*f.opt_value)), soci::into(count);
+                if (count) duplicates.push_back(ns[i]);
+                i++;
+            },
+            [&](auto &&) { i++; },
+        fs), ...);
+    }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
 
@@ -36,12 +44,17 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
 }
 
 void insert_model_into_db(soci::session &db, std::string_view table_name, rs::model::CModel auto &&m) {
+    auto vs = std::apply([](auto&&... xs) { 
+          return std::array{
+              rs::if_else(xs.opt_value.has_value(),
+                      [](auto &&t) { return fmt::format("'{}'", *t.opt_value); },
+                      [](auto &&t) { return "NULL"; },
+              xs)...};
+    }, m.fields());
+
     db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
               fmt::join(m.field_names(), ","),
-              fmt::join(m.transform_field_values_or(
-                  [](const auto &val) {
-                      return fmt::format("'{}'", val);
-                   }, std::string{"NULL"}), ","));
+              fmt::join(std::move(vs), ","));
 }
 
 } // ns rs::actions

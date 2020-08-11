@@ -22,7 +22,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
    router.api_get(std::make_tuple("/api/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](rs::model::Id&& req_params, std::uint32_t id) -> nlohmann::json {
            if (req_params.id.opt_value.has_value())
-               std::cout << req_params.id.opt_value.value() << std::endl;
+               std::cout << *(req_params.id.opt_value) << std::endl;
            else
                std::cout << "no value" << std::endl;
 

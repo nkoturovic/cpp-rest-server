@@ -28,8 +28,8 @@ concept CModel = std::derived_from<C,Model<C>>;
 std::ostream& operator<<(std::ostream &out, CModel auto const& model) {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
           if constexpr (refl::trait::is_field<decltype(member)>()) {
-              if (member(model).has_value()) {
-                  out << member.name.c_str() << "=" << member(model).opt_value.value() << ";";
+              if (member(model).opt_value.has_value()) {
+                  out << member.name.c_str() << "=" << *(member(model).opt_value) << ";";
               }
           }
       });
@@ -42,7 +42,7 @@ void to_json(nlohmann::json& j, CModel auto const& model)
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
             if (member(model).opt_value.has_value()) {
-                j[member.name.c_str()] = member(model).opt_value.value();
+                j[member.name.c_str()] = *(member(model).opt_value);
             }
         }
     });
@@ -64,10 +64,7 @@ void from_json(const nlohmann::json& j, CModel auto& model)
                     }
                 }
             } catch(...) {
-                    // std::clog << __FILE__ 
-                        //           << '(' << __LINE__  << ')'
-                        //           << ": Polje " << member.name.str() 
-                        //           << " nije postavljeno." << '\n';
+                // Field not set
             }
         }
     });
@@ -105,6 +102,13 @@ struct Model {
         });
     }
 
+    [[nodiscard]] constexpr auto fields() const {
+        auto const& model = static_cast<Derived const&>(*this);
+        return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
+               return member(model);
+        });
+    }
+
     template <cnstr::Cnstr C>
     static consteval auto field_names_having_cnstr() {
 
@@ -118,38 +122,14 @@ struct Model {
     }
 
     template <cnstr::Cnstr C>
-    auto field_names_str_values_having_cnstr() const {
-        std::vector<std::pair<const char *, std::string>> result;
-        auto const& model = static_cast<Derived const&>(*this);
-        unsigned i = 0;
-        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
-            if constexpr (decltype(member)::value_type:: template have_constraint<C>()) {
-                if (member(model).opt_value.has_value())
-                   result.emplace_back(
-                           member.name.c_str(),
-                           fmt::format("{}", member(model).opt_value.value())
-                   );
-            }
+    auto fields_having_cnstr() const {
+        auto memb_have_cnstr = refl::util::filter(refl::member_list<Derived>{}, [](auto member) {
+             return decltype(member)::value_type:: template have_constraint<C>();
         });
-        return result;
-    }
 
-    [[nodiscard]] constexpr auto fields() const {
         auto const& model = static_cast<Derived const&>(*this);
-        return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
-               return member(model);
-        });
-    }
-
-    template <typename Func, typename R>
-    [[nodiscard]] constexpr auto transform_field_values_or(Func &&f, const R& default_value) const {
-        auto const& model = static_cast<Derived const&>(*this);
-        return refl::util::map_to_array<R>(refl::reflect(model).members, [&](auto member) {
-            if (member(model).opt_value.has_value()) [[ likely ]] {
-                return f.template operator()<typename decltype(member)::value_type::value_type>(member(model).opt_value.value());
-            } else {
-                return default_value;
-            }
+        return refl::util::map_to_tuple(memb_have_cnstr, [&](auto member) {
+            return member(model);
         });
     }
 
@@ -246,7 +226,7 @@ struct soci::type_conversion<M>
     {
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
-                v.set(member.name.c_str(), member(model).opt_value.value());
+                v.set(member.name.c_str(), *(member(model).opt_value));
             }
         });
         ind = soci::indicator::i_ok;
@@ -254,4 +234,3 @@ struct soci::type_conversion<M>
 };
 
 #endif //RS_MODEL_BASE_HPP
-

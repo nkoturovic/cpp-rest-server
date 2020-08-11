@@ -21,10 +21,13 @@ int main()
 
     // izvlacimo sve usere dok ih ima
     while (getUsersStmt.fetch()) {
-        user.id.erase_value(); // brisemo id (ne sme videti korisnik npr.)
+        user.id.opt_value.reset(); // brisemo id (ne sme videti korisnik npr.)
         std::cout << user.json().dump(2) << '\n'; // stampamo
         // Pretvaramo u mapu i iteriramo [k,v]
-        auto [ks,vs] = user.fields_with_value_str();
+        auto ks = user.field_names();
+        auto vs = user.transform_field_values_or([](auto v) {
+                return fmt::format("{}", v);
+        }, std::string{"NOT SET!"});
         for (unsigned i = 0; i < ks.size(); i++) {
             std::cout << ks[i] << " -> " << vs[i] << std::endl;
         }
