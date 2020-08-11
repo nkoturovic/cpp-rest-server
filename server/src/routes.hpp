@@ -21,12 +21,12 @@ inline void register_routes(rs::Router &router, soci::session &db)
 
    router.api_get(std::make_tuple("/api/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](rs::model::Id&& req_params, std::uint32_t id) -> nlohmann::json {
-           if (req_params.id.has_value())
-               std::cout << req_params.id.value() << std::endl;
+           if (req_params.id.opt_value.has_value())
+               std::cout << req_params.id.opt_value.value() << std::endl;
            else
                std::cout << "no value" << std::endl;
 
-           auto vec = rs::actions::get_models_from_db<rs::model::User>(db, "users", fmt::format("id = {}", id));
+           auto vec = rs::actions::get_models_from_db<rs::model::User>(db, "users", "*", fmt::format("id = {}", id));
            rs::throw_if<rs::NotFoundError>(vec.empty(), "User with that id is not found");
            return vec.back();
       }

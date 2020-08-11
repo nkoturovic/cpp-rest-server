@@ -20,7 +20,7 @@ static inline RequestParamsModel extract_request_params_model(const auto &req) {
             RequestParamsModel params;
             for (const auto &[k,v] : restinio::parse_query(req->header().query())) {
                 auto key_str = fmt::format("{}", k);
-                params.set_field(key_str, std::string(v));
+                params.try_set_field_value(key_str, std::string(v));
             }
             return params;
         } else /* if (req_method == restinio::http_method_post()) */ {
@@ -66,9 +66,32 @@ public:
                         .set_body(e.json().dump())
                         .done();
         } catch (const soci::soci_error &e) {
+            // TODO: Put this custom messages - It Yields Unknown DB error for Unique Constraint violation 
+            // constexpr auto msg_from_category = [](soci::soci_error::error_category category) {
+            //     switch (category) {
+            //         case soci::soci_error::connection_error:
+            //             return "Connection error";
+            //         case soci::soci_error::invalid_statement:
+            //             return "Invalid statement";
+            //         case soci::soci_error::no_privilege:
+            //             return "Invalid privilege";
+            //         case soci::soci_error::no_data:
+            //             return "No data";
+            //         case soci::soci_error::constraint_violation:
+            //             return "Constraint violation";
+            //         case soci::soci_error::unknown_transaction_state:
+            //             return "Unknown transaction state";
+            //         case soci::soci_error::system_error:
+            //             return "System Error";
+            //         default: /* soci::soci_error::unknown: */
+            //             return "Unknown DB error";
+            //     }
+            // };
+            // // Maybe log somewhere: e.get_error_message(); or e.what();
+            // const char * msg = msg_from_category(e.get_error_category());
              return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
-                    .set_body(rs::DBError(e.get_error_message()).json().dump())
+                    .set_body(rs::DBError(/*TODO:msg*/e.get_error_message()).json().dump())
                     .done();
         } catch (const std::exception &e) {
              return req->create_response(restinio::status_internal_server_error())

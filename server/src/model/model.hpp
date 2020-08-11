@@ -29,7 +29,7 @@ std::ostream& operator<<(std::ostream &out, CModel auto const& model) {
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
           if constexpr (refl::trait::is_field<decltype(member)>()) {
               if (member(model).has_value()) {
-                  out << member.name.c_str() << "=" << member(model).value() << ";";
+                  out << member.name.c_str() << "=" << member(model).opt_value.value() << ";";
               }
           }
       });
@@ -41,8 +41,8 @@ void to_json(nlohmann::json& j, CModel auto const& model)
     j = nlohmann::json{};
     refl::util::for_each(refl::reflect(model).members, [&](auto member) {
         if constexpr (refl::trait::is_field<decltype(member)>()) {
-            if (member(model).has_value()) {
-                j[member.name.c_str()] = member(model).value();
+            if (member(model).opt_value.has_value()) {
+                j[member.name.c_str()] = member(model).opt_value.value();
             }
         }
     });
@@ -57,10 +57,10 @@ void from_json(const nlohmann::json& j, CModel auto& model)
                 auto tmp = j.at(member.name.c_str());
                 if (!tmp.empty()) {
                     if (!tmp.is_string() || std::is_convertible_v<field_type, std::string>) {
-                        member(model).set_value(tmp);
+                        member(model).opt_value = tmp;
                     } else /* if tmp is string and field_type not conv. to string */ {
                         field_type ftmp = boost::lexical_cast<field_type>(tmp.template get<std::string>()); 
-                        member(model).set_value(std::move(ftmp));
+                        member(model).opt_value = std::move(ftmp);
                     }
                 }
             } catch(...) {
@@ -82,7 +82,6 @@ public:
 
     template <typename Func, typename ... Args>
     auto transform(Func && f, Args &&...args) const {
-
         using vec_type = std::vector<decltype(f.template operator()<cnstr::Void>(args...))>;
         std::unordered_map<const char *, vec_type> result_map; result_map.reserve(std::tuple_size_v<decltype(cs)>);
         hana::for_each(cs, [&](auto c) {
@@ -106,53 +105,30 @@ struct Model {
         });
     }
 
-    static auto field_names_str() {
-        return refl::util::map_to_array<std::string>(refl::member_list<Derived>{}, [](auto member) {
-            return member.name.str();
+    template <cnstr::Cnstr C>
+    static consteval auto field_names_having_cnstr() {
+
+        auto memb_have_cnstr = refl::util::filter(refl::member_list<Derived>{}, [](auto member) {
+             return decltype(member)::value_type:: template have_constraint<C>();
+        });
+
+        return refl::util::map_to_array<const char *>(memb_have_cnstr, [](auto member) {
+            return member.name.c_str();
         });
     }
 
-    [[nodiscard]] static auto get_description() {
-        std::unordered_map<const char *, FieldDescription> result; result.reserve(num_of_fields());
+    template <cnstr::Cnstr C>
+    auto field_names_str_values_having_cnstr() const {
+        std::vector<std::pair<const char *, std::string>> result;
+        auto const& model = static_cast<Derived const&>(*this);
+        unsigned i = 0;
         refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
-            if constexpr (refl::trait::is_field<decltype(member)>())
-                result[member.name.c_str()] = decltype(member)::value_type::get_description();
-        });
-        return result;
-    }
-
-    template <typename FieldType>
-    [[nodiscard]] constexpr FieldType get_field(std::string_view field_name) const {
-        auto const& model = static_cast<Derived const&>(*this); FieldType result;
-        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-            if (field_name == member.name.c_str())
-                result = member(model);
-        });
-        return result;
-    }
-
-    template <typename T>
-    bool set_field(std::string_view field_name, T &&value) {
-        auto& model = static_cast<Derived&>(*this);
-        bool result = false;
-        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-            using field_type = typename decltype(member)::value_type::value_type;
-            if constexpr (refl::trait::is_field<decltype(member)>()) {
-                if (field_name == member.name.c_str() ) {
-                    if constexpr (std::is_convertible_v<T, field_type>) {
-                        member(model).set_value(std::forward<T>(value));
-                        result = true;
-                        return;
-                    } else {
-                        try {
-                            field_type casted = boost::lexical_cast<field_type>(std::move(value));
-                            member(model).set_value(std::move(casted));
-                            result = true;
-                        } catch (...) { 
-                        }
-                        return;
-                    }
-                }
+            if constexpr (decltype(member)::value_type:: template have_constraint<C>()) {
+                if (member(model).opt_value.has_value())
+                   result.emplace_back(
+                           member.name.c_str(),
+                           fmt::format("{}", member(model).opt_value.value())
+                   );
             }
         });
         return result;
@@ -164,35 +140,62 @@ struct Model {
                return member(model);
         });
     }
-    
-   [[nodiscard]] constexpr auto field_values() const {
+
+    template <typename Func, typename R>
+    [[nodiscard]] constexpr auto transform_field_values_or(Func &&f, const R& default_value) const {
         auto const& model = static_cast<Derived const&>(*this);
-        return refl::util::map_to_tuple(refl::reflect(model).members, [&model](auto member) {
-                return member(model).opt_value();
+        return refl::util::map_to_array<R>(refl::reflect(model).members, [&](auto member) {
+            if (member(model).opt_value.has_value()) [[ likely ]] {
+                return f.template operator()<typename decltype(member)::value_type::value_type>(member(model).opt_value.value());
+            } else {
+                return default_value;
+            }
         });
     }
 
-    [[nodiscard]] constexpr auto field_opt_values_cstr() const {
-         auto const& model = static_cast<Derived const&>(*this);
-         return refl::util::map_to_array<std::optional<std::string>>(refl::reflect(model).members, [&model](auto member) {
-                if (auto field = member(model); field.has_value())
-                    return std::make_optional<std::string>(fmt::format("{}", std::move(field.value())));
-                else
-                    return std::optional<std::string>{std::nullopt};
-         });
+    [[nodiscard]] static auto get_description() {
+        std::unordered_map<const char *, FieldDescription> result; result.reserve(num_of_fields());
+        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
+            if constexpr (refl::trait::is_field<decltype(member)>())
+                result[member.name.c_str()] = decltype(member)::value_type::get_description();
+        });
+        return result;
     }
+        
+    //[[nodiscard]] constexpr FieldType get_field(const char * field_name) const {
+    //    auto const& model = static_cast<Derived const&>(*this); FieldType result;
+    //    refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+    //        if (field_name == member.name.c_str())
+    //            result = member(model);
+    //    });
+    //    return result;
+    //}
 
-    [[nodiscard]] auto field_names_values_str() const {
-         auto const& model = static_cast<Derived const&>(*this);
-         std::vector<std::string> ns; ns.reserve(num_of_fields());
-         std::vector<std::string> vs; vs.reserve(num_of_fields());
-         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-                if (auto field = member(model); field.has_value()) {
-                    ns.emplace_back(member.name.str());
-                    vs.emplace_back(fmt::format("{}", std::move(field.value())));
+    template <typename T>
+    bool try_set_field_value(std::string_view field_name, T &&value) {
+        auto& model = static_cast<Derived&>(*this);
+        bool result = false;
+        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
+            using field_type = typename decltype(member)::value_type::value_type;
+            if constexpr (refl::trait::is_field<decltype(member)>()) {
+                if (field_name == member.name.c_str() ) {
+                    if constexpr (std::is_convertible_v<T, field_type>) {
+                        member(model).opt_value = std::forward<T>(value);
+                        result = true;
+                        return;
+                    } else {
+                        try {
+                            field_type casted = boost::lexical_cast<field_type>(std::move(value));
+                            member(model).opt_value = std::move(casted);
+                            result = true;
+                        } catch (...) { 
+                        }
+                        return;
+                    }
                 }
-         });
-         return std::pair {ns, vs};
+            }
+        });
+        return result;
     }
 
     [[nodiscard]] auto get_unsatisfied_constraints() const {
@@ -200,19 +203,6 @@ struct Model {
         return ModelConstraintsWrapper(refl::util::map_to_tuple(refl::reflect(model).members, [&](auto member) {
                 return std::pair{member.name.c_str(), member(model).unsatisfied_constraints};
         }));
-    }
-
-    [[nodiscard]] std::unordered_map<const char *,std::string> get_unique_cnstr_fields() const {
-        auto const& model = static_cast<Derived const&>(*this);
-        std::unordered_map<const char *, std::string> result_map; result_map.reserve(num_of_fields());
-        refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-            if constexpr (refl::trait::is_field<decltype(member)>()) {
-                if (auto field = member(model); field.has_value() && field.unique()) {
-                    result_map[member.name.c_str()] = fmt::format("{}", field.value());
-                }
-            }
-        });
-        return result_map;
     }
 
     [[nodiscard]] nlohmann::json json() const {
@@ -244,7 +234,7 @@ struct soci::type_conversion<M>
             if constexpr (refl::trait::is_field<decltype(member)>()) {
                 try {
                     using decayed = typename std::remove_cvref_t<decltype(member(model))>::value_type;
-                    member(model).set_value(v.get<decayed>(member.name.str()));
+                    member(model).opt_value = v.get<decayed>(member.name.c_str());
                 } catch (const std::exception &e) {
                     // Some error (null not okay for this type ...)
                     // std::cerr << member(u).value() << std::endl; // std::cerr << e.what() << std::endl;
@@ -256,7 +246,7 @@ struct soci::type_conversion<M>
     {
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>()) {
-                v.set(member.name.str(), member(model).value());
+                v.set(member.name.c_str(), member(model).opt_value.value());
             }
         });
         ind = soci::indicator::i_ok;
@@ -264,3 +254,4 @@ struct soci::type_conversion<M>
 };
 
 #endif //RS_MODEL_BASE_HPP
+

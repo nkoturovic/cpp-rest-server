@@ -21,12 +21,15 @@ void to_json(nlohmann::json& j, const FieldDescription& pd) {
 };
 
 template <typename T, cnstr::Cnstr ...Cs>
-class Field {
-private:
-    std::optional<T> m_value;
-public:
+struct Field {
     using value_type = T;
     constexpr static auto cnstr_list = hana::tuple_t<Cs...>;
+    std::optional<T> opt_value;
+
+    template <cnstr::Cnstr C>
+    [[nodiscard]] static consteval bool have_constraint() {
+        return hana::contains(cnstr_list, hana::type_c<C>);
+    }
 
     [[nodiscard]] static FieldDescription get_description() {
         return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...x) {
@@ -53,26 +56,8 @@ public:
             }
             return vec;
         }
-    } unsatisfied_constraints{m_value};
-
-    Field() = default;
-    Field(T &&value)
-        : m_value(std::move(value)) {}
-
-    constexpr const T& value() const { return m_value.value(); }
-    [[nodiscard]] constexpr T&& value() { return std::move(*m_value); }
-    constexpr const std::optional<T>& opt_value() const& { return m_value; }
-    [[nodiscard]] std::optional<T>&& opt_value() && { return std::move(m_value); }
-
-    void set_value(T&& value) { m_value = std::move(value); }
-    void erase_value() { m_value = { std::nullopt }; }
-    [[nodiscard]] bool has_value() const { return m_value.has_value(); }
-
-    [[nodiscard]] bool unique() const {
-        return hana::contains(cnstr_list, hana::type_c<cnstr::Unique>);
-    }
+    } unsatisfied_constraints{opt_value};
 };
 
 } // ns rs::model
-
 #endif // RS_FIELD_HPP
