@@ -45,8 +45,8 @@ namespace rs::model::cnstr {
 template<typename C>
 concept Cnstr = requires(typename C::value_type t) {
     { C::is_satisfied(t) } -> std::same_as<bool>;
-    { C::name } -> std::convertible_to<std::string_view>;
-    { C::description } -> std::convertible_to<std::string_view>;
+    { C::name } -> std::convertible_to<const char *>;
+    { C::description } -> std::convertible_to<const char *>;
 };
 
 /* --------- Constraints --------- */

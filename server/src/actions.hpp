@@ -47,8 +47,8 @@ void insert_model_into_db(soci::session &db, std::string_view table_name, rs::mo
     auto vs = std::apply([](auto&&... xs) { 
           return std::array{
               rs::if_else(xs.opt_value.has_value(),
-                      [](auto &&t) { return fmt::format("'{}'", *t.opt_value); },
-                      [](auto &&t) { return "NULL"; },
+                      [](auto &&f) { return fmt::format("'{}'", *f.opt_value); },
+                      [](auto &&f) { return "NULL"; },
               xs)...};
     }, m.fields());
 

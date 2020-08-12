@@ -139,7 +139,7 @@ requires (!VoidResultFunc<TrueFunc, Ts...> && !VoidResultFunc<FalseFunc, Ts...>)
 auto if_else(bool condition, TrueFunc &&true_func, FalseFunc &&false_func, Ts&& ...ts) {
     return condition 
     ? std::invoke(std::forward<TrueFunc>(true_func), std::forward<Ts>(ts)...)
-    :  std::invoke(std::forward<FalseFunc>(false_func), std::forward<Ts>(ts)...);
+    : std::invoke(std::forward<FalseFunc>(false_func), std::forward<Ts>(ts)...);
 }
 
 template <typename TrueFunc, typename FalseFunc, typename ...Ts>
