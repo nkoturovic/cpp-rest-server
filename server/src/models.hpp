@@ -9,14 +9,14 @@ namespace rs::model {
 /* Models for Database */
 struct User final : Model<User> {
     Field<int32_t, cnstr::Unique> id;
-    Field<std::string, cnstr::Unique, cnstr::Length<1,10>, cnstr::Required> username;
-    Field<std::string, cnstr::Required, cnstr::Length<6,255>> password;
-    Field<std::string, cnstr::Unique,cnstr::Required, cnstr::NotEmpty, cnstr::Length<2,32>> email;
+    Field<std::string, cnstr::Unique, cnstr::Length<1,20>, cnstr::Required> username;
+    Field<std::string, cnstr::Required, cnstr::ValidPassword > password;
+    Field<std::string, cnstr::Unique, cnstr::Required, cnstr::ValidEmail> email;
     Field<std::string, cnstr::Required, cnstr::Length<2,64>> firstname;
     Field<std::string, cnstr::Required, cnstr::Length<2,64>> lastname;
-    Field<std::string, cnstr::Required> born;
-    Field<std::string, cnstr::Required> gender;
-    Field<std::string> join_date;
+    Field<std::string, cnstr::Required, cnstr::ISOdate > born;
+    Field<std::string, cnstr::Required, cnstr::ValidGender> gender;
+    Field<std::string, cnstr::ISOdate> join_date;
     Field<int32_t> permission_group;
 };
 
