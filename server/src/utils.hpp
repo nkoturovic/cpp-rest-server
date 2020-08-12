@@ -55,8 +55,8 @@ constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
 }
 
 struct CmdLineArgs {
-    const char * ip = "localhost";
-    unsigned port = 3000;
+    std::optional<const char*> address;
+    std::optional<unsigned> port;
 };
 
 CmdLineArgs parse_cmdline_args(std::span<char *> args) 
@@ -67,8 +67,8 @@ CmdLineArgs parse_cmdline_args(std::span<char *> args)
     for (auto it = std::cbegin(args); it != it_end; it++) {
         auto it_next = std::next(it);
         std::string_view curr{*it};
-        if ((curr == "--ip" || curr == "-i") && it_next != it_end)
-            result.ip = *it_next;
+        if ((curr == "--address" || curr == "-i") && it_next != it_end)
+            result.address = *it_next;
         else if ((curr == "--port" || curr == "-p") && it_next != it_end)
             result.port = std::strtoul(*it_next, nullptr, 10);
     }

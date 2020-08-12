@@ -12,7 +12,9 @@ using namespace restinio;
 int main(int argc, char * argv[])
 {
     namespace epr = restinio::router::easy_parser_router;
-    const auto [server_address, server_port] = rs::parse_cmdline_args(std::span(argv, argc));
+    auto args = rs::parse_cmdline_args(std::span(argv, argc));
+    auto server_address = args.address.value_or("localhost");
+    auto server_port = args.port.value_or(3000u);
 
     soci::session db(soci::sqlite3, "dbname=db.sqlite");
 

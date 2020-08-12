@@ -1,38 +1,38 @@
-#include <iostream>
-#include <concepts/concepts.hpp>
 #include <soci/soci.h>
 #include <soci/sqlite3/soci-sqlite3.h>
-#include <fmt/format.h>
 
 #include "models.hpp"
 
 int main() 
 {
-    soci::session sql(soci::sqlite3, "dbname=db.sqlite");
-    rs::model::User user; // ovde cemo smestiti podatke
-    soci::statement getUsersStmt = (sql.prepare << "SELECT * FROM users", soci::into(user));
-    getUsersStmt.execute();
+	soci::session sql(soci::sqlite3, "dbname=db.sqlite");
+	rs::model::User user; // ovde cemo smestiti podatke
+	soci::statement getUsersStmt = (sql.prepare << "SELECT * FROM users", soci::into(user));
+	getUsersStmt.execute();
 
-    // Izvlacimo opise svih nezadovoljenih constraint-ova i stampamo na cout
-    if (auto unsat = user.get_unsatisfied_constraints()
-                         .transform(rs::model::cnstr::get_name); unsat.size()) {
-            std::cout << nlohmann::json(unsat) << '\n';
-    }
+	// Izvlacimo opise svih nezadovoljenih constraint-ova i stampamo na cout
+	if (auto unsat = user.get_unsatisfied_constraints()
+			 .transform(rs::model::cnstr::get_name); unsat.size()) {
+		std::cout << nlohmann::json(unsat) << '\n';
+	}
+	auto print_field = [](const auto &field) {
+		if (field.opt_value.has_value())
+			std::cout << *field.opt_value << '\n';;
+	};
+	
+	// izvlacimo sve usere dok ih ima
+	while (getUsersStmt.fetch()) {
+		std::cout << "Printing json:\n";
+		user.id.opt_value.reset(); // brisemo id (ne sme videti korisnik npr.)
+		std::cout << user.json().dump(2) << '\n';
 
-    // izvlacimo sve usere dok ih ima
-    while (getUsersStmt.fetch()) {
-        user.id.opt_value.reset(); // brisemo id (ne sme videti korisnik npr.)
-        std::cout << user.json().dump(2) << '\n'; // stampamo
-        // Pretvaramo u mapu i iteriramo [k,v]
-        auto ks = user.field_names();
-        auto vs = user.transform_field_values_or([](auto v) {
-                return fmt::format("{}", v);
-        }, std::string{"NOT SET!"});
-        for (unsigned i = 0; i < ks.size(); i++) {
-            std::cout << ks[i] << " -> " << vs[i] << std::endl;
-        }
-        std::cout << "======================================\n";
-    }
+		std::cout << "Printing values:\n";
+		std::apply([&](auto&& ... xs) {
+			(print_field(xs),...);
+		}, user.fields());
+
+		std::cout << "======================================\n";
+	}
 
     return 0;
 }
