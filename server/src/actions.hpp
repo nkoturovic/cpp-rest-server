@@ -13,15 +13,14 @@ std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_v
     std::vector<const char *> duplicates;
     std::apply([&](auto&&... fs) { 
         constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
-        auto i = 0u;
-        ((rs::if_else(fs.opt_value.has_value(),
-            [&](auto &&f) { 
-                int count = 0;
-                db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, ns[i], std::move(*f.opt_value)), soci::into(count);
-                if (count) duplicates.push_back(ns[i]);
-            },
-            [&](auto &&) {},
-        fs), i++), ...);
+        auto it = std::begin(ns);
+        ((std::invoke([&](auto &&f) { 
+           if (f.opt_value.has_value()) {
+               int count = 0;
+               db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, std::move(*f.opt_value)), soci::into(count);
+               if (count) duplicates.push_back(*it);
+           };
+        }, fs), it++), ...);
     }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
@@ -42,17 +41,20 @@ std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name
     return models;
 }
 
-void insert_model_into_db(soci::session &db, std::string_view table_name, rs::model::CModel auto &&m) {
-    auto vs = std::apply([](auto&&... xs) { 
-          return std::array{
-              rs::if_else(xs.opt_value.has_value(),
-                      [](auto &&f) { return fmt::format("'{}'", *f.opt_value); },
-                      [](auto &&f) { return "NULL"; },
-              xs)...};
+template <rs::model::CModel M>
+void insert_model_into_db(soci::session &db, std::string_view table_name, M &&m) {
+    std::array<std::string, M::num_of_fields()> vs;
+    auto it = std::begin(vs);
+    std::apply([&](auto&&... fs) {
+        ((*it = std::invoke([&](auto && f) {
+               return f.opt_value.has_value()
+                      ? fmt::format("'{}'", *f.opt_value)
+                      : "NULL";
+        }, fs), it++), ...);
     }, m.fields());
 
     db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
-              fmt::join(m.field_names(), ","),
+              fmt::join(M::field_names(), ","),
               fmt::join(std::move(vs), ","));
 }
 

@@ -127,30 +127,6 @@ void register_api_reference_route(auto &router, std::string_view path) {
                .done();
     });
 }
-
-template <typename Func, typename ...Args>
-concept VoidResultFunc = std::is_same_v<void, std::invoke_result_t<Func, Args...>>;
-
-template <typename TrueFunc, typename FalseFunc, typename ...Ts>
-auto if_else(bool condition, TrueFunc &&true_func, FalseFunc &&false_func, Ts&& ...ts);
-
-template <typename TrueFunc, typename FalseFunc, typename ...Ts>
-requires (!VoidResultFunc<TrueFunc, Ts...> && !VoidResultFunc<FalseFunc, Ts...>)
-auto if_else(bool condition, TrueFunc &&true_func, FalseFunc &&false_func, Ts&& ...ts) {
-    return condition 
-    ? std::invoke(std::forward<TrueFunc>(true_func), std::forward<Ts>(ts)...)
-    : std::invoke(std::forward<FalseFunc>(false_func), std::forward<Ts>(ts)...);
-}
-
-template <typename TrueFunc, typename FalseFunc, typename ...Ts>
-requires VoidResultFunc<TrueFunc, Ts...> && VoidResultFunc<FalseFunc, Ts...>
-auto if_else(bool condition, TrueFunc &&true_func, FalseFunc &&false_func, Ts&& ...ts) {
-    if (condition)
-        return std::invoke(std::forward<TrueFunc>(true_func), std::forward<Ts>(ts)...);
-    else
-        std::invoke(std::forward<FalseFunc>(false_func), std::forward<Ts>(ts)...);
-}
-
 } // ns rs
 
 #endif 
