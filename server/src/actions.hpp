@@ -14,15 +14,14 @@ std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_v
     std::apply([&](auto&&... fs) { 
         constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
         auto i = 0u;
-        (rs::if_else(fs.opt_value.has_value(),
+        ((rs::if_else(fs.opt_value.has_value(),
             [&](auto &&f) { 
                 int count = 0;
                 db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, ns[i], std::move(*f.opt_value)), soci::into(count);
                 if (count) duplicates.push_back(ns[i]);
-                i++;
             },
-            [&](auto &&) { i++; },
-        fs), ...);
+            [&](auto &&) {},
+        fs), i++), ...);
     }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
