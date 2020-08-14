@@ -142,14 +142,14 @@ struct Model {
         return result;
     }
         
-    //[[nodiscard]] constexpr FieldType get_field(const char * field_name) const {
-    //    auto const& model = static_cast<Derived const&>(*this); FieldType result;
-    //    refl::util::for_each(refl::reflect(model).members, [&](auto member) {
-    //        if (field_name == member.name.c_str())
-    //            result = member(model);
-    //    });
-    //    return result;
-    //}
+    [[nodiscard]] constexpr static const char * get_field_name(unsigned index) {
+        const char * field_name = nullptr;
+        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, size_t curr_index) {
+            if (curr_index == index) 
+                field_name = member.name.c_str();
+        });
+        return field_name;
+    }
 
     template <typename T>
     bool try_set_field_value(std::string_view field_name, T &&value) {

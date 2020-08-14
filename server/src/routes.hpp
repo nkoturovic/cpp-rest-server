@@ -16,6 +16,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
 
    router.api_get(std::make_tuple("/api/users"),
        [&db](rs::model::Empty&&) -> nlohmann::json {
+           // fmt::print("{}", rs::actions::get_permissions<rs::model::User>(db, "users_permissions"));
            return rs::actions::get_models_from_db<rs::model::User>(db, "users");
    });
 

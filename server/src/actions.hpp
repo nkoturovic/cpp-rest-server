@@ -9,18 +9,41 @@
 namespace rs::actions {
 
 template <rs::model::CModel M>
+static auto get_permissions(soci::session &db, std::string_view table_name) 
+{
+    std::array<std::array<uint8_t, M::num_of_fields()+1>, rs::user::num_of_user_groups> ps { {0} };
+    soci::rowset<soci::row> rows = (db.prepare << fmt::format("SELECT * FROM {}", table_name));
+
+    std::for_each(std::begin(rows), std::end(rows),
+        [&](const auto &row) {
+            auto row_id = row.template get<int>("group_id");
+            ps[row_id][0] = row.template get<int>("instance");
+            for (auto i = 0u; i < M::num_of_fields(); i++) {
+                try {
+                    ps[row_id][i+1] = row.template get<int>(M::get_field_name(i));
+                } catch (const soci::soci_error &e) {
+                    // Ignoring error if field does not exist
+                }
+            }
+    });
+
+    return ps;
+}
+
+template <rs::model::CModel M>
 std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_view table_name, M const& m) {
     std::vector<const char *> duplicates;
     std::apply([&](auto&&... fs) { 
         constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
         auto it = std::begin(ns);
-        ((std::invoke([&](auto &&f) { 
-           if (f.opt_value.has_value()) {
-               int count = 0;
-               db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, std::move(*f.opt_value)), soci::into(count);
-               if (count) duplicates.push_back(*it);
-           };
-        }, fs), it++), ...);
+        ((std::invoke(
+           [&](auto &&f) { 
+              if (f.opt_value.has_value()) {
+                  int count = 0;
+                  db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, std::move(*f.opt_value)), soci::into(count);
+                  if (count) duplicates.push_back(*it);
+               };
+           }, fs), it++), ...);
     }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
@@ -48,7 +71,7 @@ void insert_model_into_db(soci::session &db, std::string_view table_name, M &&m)
     std::apply([&](auto&&... fs) {
         ((*it = std::invoke([&](auto && f) {
                return f.opt_value.has_value()
-                      ? fmt::format("'{}'", *f.opt_value)
+                      ? fmt::format("'{}'", std::move(*f.opt_value))
                       : "NULL";
         }, fs), it++), ...);
     }, m.fields());
