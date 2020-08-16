@@ -5,30 +5,10 @@
 #include <fmt/ranges.h>
 #include "errors.hpp"
 #include "model/model.hpp"
+#include "user.hpp"
+#include <jwt/jwt.hpp>
 
 namespace rs::actions {
-
-template <rs::model::CModel M>
-static auto get_permissions(soci::session &db, std::string_view table_name) 
-{
-    std::array<std::array<uint8_t, M::num_of_fields()+1>, rs::user::num_of_user_groups> ps { {0} };
-    soci::rowset<soci::row> rows = (db.prepare << fmt::format("SELECT * FROM {}", table_name));
-
-    std::for_each(std::begin(rows), std::end(rows),
-        [&](const auto &row) {
-            auto row_id = row.template get<int>("group_id");
-            ps[row_id][0] = row.template get<int>("instance");
-            for (auto i = 0u; i < M::num_of_fields(); i++) {
-                try {
-                    ps[row_id][i+1] = row.template get<int>(M::get_field_name(i));
-                } catch (const soci::soci_error &e) {
-                    // Ignoring error if field does not exist
-                }
-            }
-    });
-
-    return ps;
-}
 
 template <rs::model::CModel M>
 std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_view table_name, M const& m) {
@@ -48,38 +28,91 @@ std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_v
     return duplicates;
 }
 
+
+void check_auth_token(soci::session &db, const model::AuthToken &auth_token, PermissionParams &pp) {
+    if (!auth_token.auth_token.opt_value.has_value())
+        return;
+
+    const auto auth_tok = *auth_token.auth_token.opt_value;
+    const auto decoded = jwt::decode(auth_tok, jwt::params::algorithms({"HS256"}), jwt::params::secret("changemesecret"));
+    throw_if<InvalidAuthTokenError>(!decoded.has_claim("group_id") && !decoded.has_claim("user_id"), "Token does not have required claims");
+    const auto payload_user_id = decoded.payload().get_claim_value<int32_t>("user_id");
+    std::string db_auth_token;
+    db << fmt::format("SELECT auth_token FROM auth_tokens WHERE user_id = '{}'", payload_user_id), soci::into(db_auth_token);
+    throw_if<InvalidAuthTokenError>(auth_tok != db_auth_token);
+    const auto payload_group_id = decoded.payload().get_claim_value<int32_t>("group_id");
+    pp.group_id = static_cast<UserGroup>(payload_group_id);
+    pp.user_id = payload_user_id;
+}
+
 template <rs::model::CModel M>
-std::vector<M> get_models_from_db(soci::session &db, std::string_view table_name, std::string_view attr = "*", std::string_view filter = "") {
-    M m;
+std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, std::string_view attr = "*", std::string_view filter = "") {
+    check_auth_token(db, auth_tok, pp);
+    AuthorizedModelAccess<M> model_access(permission::READ, pp, db, table_name);
     auto filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
     soci::statement get_models_stmt = (db.prepare << 
-        fmt::format("SELECT {} FROM {} {}", attr, table_name, std::move(filter_stmt)), soci::into(m));
+        fmt::format("SELECT {} FROM {} {}", attr, table_name, std::move(filter_stmt)), soci::into(model_access.unsafe_ref()));
     get_models_stmt.execute();
     std::vector<M> models; models.reserve(get_models_stmt.get_affected_rows());
 
     while (get_models_stmt.fetch()) {
-        models.push_back(std::move(m));
+        models.push_back(std::move(model_access.get_safely()));
     }
 
     return models;
 }
 
-template <rs::model::CModel M>
-void insert_model_into_db(soci::session &db, std::string_view table_name, M &&m) {
-    std::array<std::string, M::num_of_fields()> vs;
-    auto it = std::begin(vs);
-    std::apply([&](auto&&... fs) {
-        ((*it = std::invoke([&](auto && f) {
-               return f.opt_value.has_value()
-                      ? fmt::format("'{}'", std::move(*f.opt_value))
-                      : "NULL";
-        }, fs), it++), ...);
-    }, m.fields());
+model::RefreshAndAuthTokens login(soci::session &db, const model::UserCredentials &credentials) {
+    throw_if<InvalidParamsError>(!credentials.username.opt_value.has_value() 
+                              || !credentials.password.opt_value.has_value(),
+                              "Username or password missing");
+    model::User u;
+    db << fmt::format("SELECT id,username,password,permission_group FROM users WHERE username = '{}'", *credentials.username.opt_value), soci::into(u);
+    throw_if<InvalidParamsError>(*credentials.password.opt_value != *u.password.opt_value, "Invalid username or password");
 
-    db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
-              fmt::join(M::field_names(), ","),
-              fmt::join(std::move(vs), ","));
+    jwt::jwt_object auth_token{jwt::params::algorithm("HS256"), jwt::params::secret("changemesecret")};
+    auth_token.add_claim("user_id", *u.id.opt_value);
+    auth_token.add_claim("group_id", *u.permission_group.opt_value);
+
+    try {
+        db << fmt::format("DELETE FROM auth_tokens WHERE user_id = '{}'", *u.id.opt_value);
+    } catch (soci::soci_error &) {
+        // ignoring if not exists
+    }
+
+    db << fmt::format("INSERT INTO auth_tokens (user_id,auth_token) VALUES('{}','{}')", *u.id.opt_value, auth_token.signature());
+
+    jwt::jwt_object refresh_token{jwt::params::algorithm("HS256"), jwt::params::secret("changemesecret") };
+    refresh_token.add_claim("user_id", *u.id.opt_value);
+
+    try {
+        db << fmt::format("DELETE FROM refresh_tokens WHERE user_id = '{}'", *u.id.opt_value);
+    } catch (soci::soci_error &) {
+        // ignoring if not exists
+    }
+
+    db << fmt::format("INSERT INTO refresh_tokens (user_id,refresh_token) VALUES('{}','{}')", *u.id.opt_value, refresh_token.signature());
+    return {.refresh_token = {refresh_token.signature()}, .auth_token = {auth_token.signature()}};
 }
+
+//template <rs::model::CModel M>
+//void insert_model_into_db(const model::AuthToken &auth_tok, soci::session &db, std::string_view table_name, M &&m) {
+//
+//    AuthorizedModelAccess model_access(permission::CREATE, pp, db, table_name, std::move(m));
+//    std::array<std::string, M::num_of_fields()> vs;
+//    auto it = std::begin(vs);
+//    std::apply([&](auto&&... fs) {
+//        ((*it = std::invoke([&](auto && f) {
+//               return f.opt_value.has_value()
+//                      ? fmt::format("'{}'", std::move(*f.opt_value))
+//                      : "NULL";
+//        }, fs), it++), ...);
+//    }, model_access.get_safely().fields());
+//
+//    db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
+//              fmt::join(M::field_names(), ","),
+//              fmt::join(std::move(vs), ","));
+//}
 
 } // ns rs::actions
 
