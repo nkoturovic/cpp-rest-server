@@ -25,6 +25,26 @@ struct Id final : Model<Id> {
     Field<int32_t> id;
 }; 
 
+struct RefreshToken final : Model<RefreshToken> {
+    Field<std::string> refresh_token;
+}; 
+
+struct AuthToken final : Model<AuthToken> {
+    Field<std::string> auth_token;
+}; 
+
+struct RefreshAndAuthTokens final : Model<RefreshAndAuthTokens> {
+    Field<std::string> refresh_token;
+    Field<std::string> auth_token;
+}; 
+
+
+/* Models for Database */
+struct UserCredentials final : Model<UserCredentials> {
+    Field<std::string, cnstr::Unique, cnstr::Length<1,20>, cnstr::Required> username;
+    Field<std::string, cnstr::Required, cnstr::ValidPassword > password;
+};
+
 } // ns rs::model
 
 /* Required for REFLECTION!! */
@@ -48,6 +68,29 @@ REFL_AUTO(
   type(rs::model::Id),
   field(id)
 )
+
+REFL_AUTO(
+  type(rs::model::RefreshToken),
+  field(refresh_token)
+)
+
+REFL_AUTO(
+  type(rs::model::AuthToken),
+  field(auth_token)
+)
+
+REFL_AUTO(
+  type(rs::model::RefreshAndAuthTokens),
+  field(refresh_token),
+  field(auth_token)
+)
+
+REFL_AUTO(
+  type(rs::model::UserCredentials),
+  field(username),
+  field(password)
+)
+
 
 
 #endif // RS_MODELS_HPP

@@ -25,7 +25,7 @@ int main(int argc, char * argv[])
         [](auto req) {
             return req->create_response(restinio::status_not_found()).connection_close()
                        .append_header( restinio::http_field::content_type, "application/json" )
-                       .set_body(rs::NotFoundError().json().dump())
+                       .set_body(rs::NotFoundError("Route not found").json().dump())
                        .done();
     });
 
@@ -39,7 +39,7 @@ int main(int argc, char * argv[])
             restinio::router::easy_parser_router_t>;
 
     router.api_get(std::make_tuple("/api/help_json"), 
-        [&router](rs::model::Empty) -> nlohmann::json {
+        [&router](rs::model::Empty&&, rs::model::AuthToken&&) -> nlohmann::json {
             return router.registered_routes_info;
     });
 

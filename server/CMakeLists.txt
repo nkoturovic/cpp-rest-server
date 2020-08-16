@@ -20,4 +20,6 @@ add_executable(rest-server ${SRC_LIST} ${HEADERS})
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/db.sqlite
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(rest-server PRIVATE pthread boost_system fmt http_parser soci_core soci_sqlite3)
+find_package(cpp-jwt REQUIRED)
+
+target_link_libraries(rest-server PRIVATE pthread boost_system fmt http_parser soci_core soci_sqlite3 cpp-jwt::cpp-jwt)

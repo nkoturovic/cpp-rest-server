@@ -1,9 +1,14 @@
 #ifndef RS_HANDLER_HPP
 #define RS_HANDLER_HPP
 
+#include <jwt/jwt.hpp>
 #include "errors.hpp"
 #include "utils.hpp"
 #include "model/model.hpp"
+#include "models.hpp"
+
+#include <restinio/all.hpp>
+#include <restinio/helpers/http_field_parsers/bearer_auth.hpp>
 
 namespace rs {
 
@@ -38,6 +43,8 @@ static inline RequestParamsModel extract_request_params_model(const auto &req) {
     }
 }
 
+namespace bearer_auth = restinio::http_field_parsers::bearer_auth;
+
 template <class Func, model::CModel RequestParamsModel>
 class Handler {
     Func m_handler;
@@ -53,7 +60,16 @@ public:
             nlohmann::json resp_json;
             nlohmann::json json_req = rs::extract_request_params_model<RequestParamsModel>(req);
             RequestParamsModel pars(std::move(json_req));
-            resp_json = m_handler(std::move(pars), std::forward<RouteParams>(routeparams)...);
+
+            // old way (from params)
+            //nlohmann::json json_auth_tok = rs::extract_request_params_model<model::AuthToken>(req);
+            //model::AuthToken auth_tok(std::move(json_auth_tok));
+
+            // Extract auth params:
+            model::AuthToken auth_tok;
+            const auto auth_params = bearer_auth::try_extract_params(*req, restinio::http_field::authorization); 
+            if (auth_params) auth_tok.auth_token.opt_value = auth_params->token;
+            resp_json = m_handler(std::move(pars), std::move(auth_tok), std::forward<RouteParams>(routeparams)...);
 
         return req->create_response(restinio::status_ok())
                    .append_header(restinio::http_field::content_type, "application/json")

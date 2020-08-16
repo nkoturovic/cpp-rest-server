@@ -142,13 +142,41 @@ struct Model {
         return result;
     }
         
-    [[nodiscard]] constexpr static const char * get_field_name(unsigned index) {
+    [[nodiscard]] constexpr static const char * field_name(unsigned index) {
         const char * field_name = nullptr;
         refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, size_t curr_index) {
             if (curr_index == index) 
                 field_name = member.name.c_str();
         });
         return field_name;
+    }
+
+    [[nodiscard]] static constexpr unsigned field_index(std::string_view field_name) {
+        unsigned index = -1;
+        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, unsigned curr_index) {
+            if (field_name == member.name.c_str())
+                index = curr_index;
+        });
+        return index;
+    }
+
+    template <typename ValueType>
+    [[nodiscard]] constexpr std::optional<ValueType>& field_opt_value(unsigned index) {
+        void * field_value = nullptr;
+        auto &model = static_cast<Derived&>(*this);
+        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, size_t curr_index) {
+            if (curr_index == index) 
+                field_value = static_cast<void*>(&(member(model).opt_value));
+        });
+        return *static_cast<std::optional<ValueType>*>(field_value);
+    }
+
+    constexpr void erase_value(unsigned index) {
+        auto& model = static_cast<Derived&>(*this);
+        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, unsigned curr_index) {
+            if (curr_index == index)
+                member(model).opt_value.reset();
+        });
     }
 
     template <typename T>

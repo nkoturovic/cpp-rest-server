@@ -72,6 +72,27 @@ struct DBError final : Error {
     [[nodiscard]] inline restinio::http_status_line_t status() const override { return restinio::status_bad_request(); }
 };
 
+struct UnauthorizedError final : Error {
+    using Error::Error;
+    [[nodiscard]] constexpr std::string_view id() const override { return "UnauthorizedError"; }
+    [[nodiscard]] constexpr std::string_view msg() const override { return "Invalid permissions"; }
+    [[nodiscard]] inline restinio::http_status_line_t status() const override { return restinio::status_forbidden(); }
+};
+
+struct InvalidAuthTokenError final : Error {
+    using Error::Error;
+    [[nodiscard]] constexpr std::string_view id() const override { return "InvalidAuthToken"; }
+    [[nodiscard]] constexpr std::string_view msg() const override { return "Invalid authentication token"; }
+    [[nodiscard]] inline restinio::http_status_line_t status() const override { return restinio::status_bad_request(); }
+};
+
+struct InvalidRefreshTokenError final : Error {
+    using Error::Error;
+    [[nodiscard]] constexpr std::string_view id() const override { return "InvalidRefreshToken"; }
+    [[nodiscard]] constexpr std::string_view msg() const override { return "Invalid refresh token"; }
+    [[nodiscard]] inline restinio::http_status_line_t status() const override { return restinio::status_bad_request(); }
+};
+
 } // ns rs
 
 template<rs::CError E>

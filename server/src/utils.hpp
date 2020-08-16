@@ -6,7 +6,6 @@
 #include <restinio/router/easy_parser_router.hpp>
 
 #include <boost/lexical_cast.hpp>
-#include "3rd_party/magic_enum.hpp"
 #include "errors.hpp"
 
 /* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
@@ -40,33 +39,6 @@ template <> constexpr const char * type_name<bool> = "bool";
 template <> constexpr const char * type_name<std::string> = "string";
 template <> constexpr const char * type_name<std::string_view> = "string";
 template <> constexpr const char * type_name<const char *> = "string";
-
-namespace user {
-enum class UserGroup {
-    other = 0,
-    owner = 1,
-    guest = 2,
-    user = 3,
-    admin = 4
-};
-
-constexpr unsigned num_of_user_groups = magic_enum::enum_count<UserGroup>();
-}
-
-namespace permissions {
-    uint8_t CREATE = 0b1000;
-    uint8_t READ = 0b0100;
-    uint8_t UPDATE = 0b0010;
-    uint8_t DELETE = 0b0001;
-
-    bool have_exact_permissions(uint8_t desired, uint8_t perm) {
-        return (desired ^ perm) == 0;
-    }
-
-    bool have_permission(uint8_t desired, uint8_t perm) {
-        return (desired & perm) == desired;
-    }
-};
 
 nlohmann::json success_response(std::string_view info = "") {
     nlohmann::json json;
