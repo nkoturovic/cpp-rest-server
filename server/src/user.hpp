@@ -5,6 +5,8 @@
 #include <functional>
 #include <ctype.h>
 #include <nlohmann/json.hpp>
+#include <jwt/jwt.hpp>
+
 #include "errors.hpp"
 #include "utils.hpp"
 
@@ -100,6 +102,22 @@ class AuthorizedModelAccess {
     PermissionParams m_permission_params;
     permissions_matrix_t m_permissions_matrix;
 
+    void grant_permission_params_from_auth_token(soci::session &db, const model::AuthToken &auth_token, PermissionParams &pp) {
+        if (!auth_token.auth_token.opt_value.has_value())
+            return;
+
+        const auto auth_tok = *auth_token.auth_token.opt_value;
+        const auto decoded = jwt::decode(auth_tok, jwt::params::algorithms({"HS256"}), jwt::params::secret("changemesecret"));
+        throw_if<InvalidAuthTokenError>(!decoded.has_claim("group_id") && !decoded.has_claim("user_id"), "Token does not have required claims");
+        const auto payload_user_id = decoded.payload().get_claim_value<int32_t>("user_id");
+        std::string db_auth_token;
+        db << fmt::format("SELECT auth_token FROM auth_tokens WHERE user_id = '{}'", payload_user_id), soci::into(db_auth_token);
+        throw_if<InvalidAuthTokenError>(auth_tok != db_auth_token);
+        const auto payload_group_id = decoded.payload().get_claim_value<int32_t>("group_id");
+        pp.group_id = static_cast<UserGroup>(payload_group_id);
+        pp.user_id = payload_user_id;
+    }
+
     void check_instance_permissions() {
         uint8_t group_instance_perms = m_permissions_matrix[static_cast<uint8_t>(m_permission_params.group_id)][0];
         uint8_t owner_instance_perms = m_permissions_matrix[static_cast<uint8_t>(UserGroup::owner)][0];
@@ -120,7 +138,7 @@ class AuthorizedModelAccess {
         }
     }
 
-    void load_from_db(soci::session &db, std::string_view table_name) {
+    void load_perms_from_db(soci::session &db, std::string_view table_name) {
         soci::rowset<soci::row> rows = (db.prepare << fmt::format("SELECT * FROM {}", std::string{table_name} + "_permissions"));
         std::for_each(std::begin(rows), std::end(rows),
             [&](const auto &row) {
@@ -156,22 +174,13 @@ class AuthorizedModelAccess {
         }
         rs::throw_if<UnauthorizedError>(num_of_erased_fields == M::num_of_fields(), permissions_to_json(m_desired_permissions));
     }
-
     public:
-
-    AuthorizedModelAccess(uint8_t desired_permissions, PermissionParams pp, permissions_matrix_t && permissions_matrix, M &&m = {}) 
-        : m_model(std::move(m)), 
-          m_desired_permissions(desired_permissions),
-          m_permission_params(std::move(pp)), 
-          m_permissions_matrix(std::move(permissions_matrix)) {
-              check_instance_permissions();
-          }
-
-    AuthorizedModelAccess(uint8_t desired_permissions, PermissionParams pp, soci::session &db, std::string_view table_name, M &&m = {}) 
+    AuthorizedModelAccess(uint8_t desired_permissions, model::AuthToken auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, M &&m = {}) 
         : m_model(std::move(m)),
           m_desired_permissions(desired_permissions),
           m_permission_params(std::move(pp)) {
-        load_from_db(db, table_name);
+        grant_permission_params_from_auth_token(db, auth_tok, m_permission_params);
+        load_perms_from_db(db, table_name);
         check_instance_permissions();
     }
 
