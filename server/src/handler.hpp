@@ -61,10 +61,6 @@ public:
             nlohmann::json json_req = rs::extract_request_params_model<RequestParamsModel>(req);
             RequestParamsModel pars(std::move(json_req));
 
-            // old way (from params)
-            //nlohmann::json json_auth_tok = rs::extract_request_params_model<model::AuthToken>(req);
-            //model::AuthToken auth_tok(std::move(json_auth_tok));
-
             // Extract auth params:
             model::AuthToken auth_tok;
             const auto auth_params = bearer_auth::try_extract_params(*req, restinio::http_field::authorization); 

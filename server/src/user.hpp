@@ -47,6 +47,7 @@ struct PermissionParams {
     rs::UserGroup group_id = UserGroup::guest;
     std::optional<uint64_t> user_id;
     std::optional<std::string> owner_field_name;
+    bool has_granted_perms = false;
 
     PermissionParams without_owner() const {
         PermissionParams result = *this;
@@ -94,6 +95,23 @@ auto permission_matrix_json(auto ps) {
     return result_json;
 }
 
+void grant_permission_params_from_auth_token(soci::session &db, const model::AuthToken &auth_token, PermissionParams &pp) {
+    if (!auth_token.auth_token.opt_value.has_value() || pp.has_granted_perms)
+        return;
+
+    const auto auth_tok = *auth_token.auth_token.opt_value;
+    const auto decoded = jwt::decode(auth_tok, jwt::params::algorithms({"HS256"}), jwt::params::secret("changemesecret"));
+    throw_if<InvalidAuthTokenError>(!decoded.has_claim("group_id") && !decoded.has_claim("user_id"), "Token does not have required claims");
+    const auto payload_user_id = decoded.payload().get_claim_value<int32_t>("user_id");
+    std::string db_auth_token;
+    db << fmt::format("SELECT auth_token FROM auth_tokens WHERE user_id = '{}'", payload_user_id), soci::into(db_auth_token);
+    throw_if<InvalidAuthTokenError>(auth_tok != db_auth_token);
+    const auto payload_group_id = decoded.payload().get_claim_value<int32_t>("group_id");
+    pp.group_id = static_cast<UserGroup>(payload_group_id);
+    pp.user_id = payload_user_id;
+    pp.has_granted_perms = true;
+}
+
 template <model::CModel M>
 class AuthorizedModelAccess {
     using permissions_matrix_t = std::array<std::array<uint8_t, M::num_of_fields()+1>,rs::num_of_user_groups>;
@@ -101,22 +119,6 @@ class AuthorizedModelAccess {
     uint8_t m_desired_permissions;
     PermissionParams m_permission_params;
     permissions_matrix_t m_permissions_matrix;
-
-    void grant_permission_params_from_auth_token(soci::session &db, const model::AuthToken &auth_token, PermissionParams &pp) {
-        if (!auth_token.auth_token.opt_value.has_value())
-            return;
-
-        const auto auth_tok = *auth_token.auth_token.opt_value;
-        const auto decoded = jwt::decode(auth_tok, jwt::params::algorithms({"HS256"}), jwt::params::secret("changemesecret"));
-        throw_if<InvalidAuthTokenError>(!decoded.has_claim("group_id") && !decoded.has_claim("user_id"), "Token does not have required claims");
-        const auto payload_user_id = decoded.payload().get_claim_value<int32_t>("user_id");
-        std::string db_auth_token;
-        db << fmt::format("SELECT auth_token FROM auth_tokens WHERE user_id = '{}'", payload_user_id), soci::into(db_auth_token);
-        throw_if<InvalidAuthTokenError>(auth_tok != db_auth_token);
-        const auto payload_group_id = decoded.payload().get_claim_value<int32_t>("group_id");
-        pp.group_id = static_cast<UserGroup>(payload_group_id);
-        pp.user_id = payload_user_id;
-    }
 
     void check_instance_permissions() {
         uint8_t group_instance_perms = m_permissions_matrix[static_cast<uint8_t>(m_permission_params.group_id)][0];

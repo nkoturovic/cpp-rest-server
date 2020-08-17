@@ -134,13 +134,13 @@ struct ISOdate {
     constexpr static const char * description = "Date format is yyyy-mm-dd";
 };
 
-template<int from_ = 0, int to_ = from_>
+template<unsigned long from_ = 0, unsigned long to_ = from_>
 struct Length { 
     using value_type = std::string_view;
     Length() = delete;
 
-    constexpr static int from = from_;
-    constexpr static int to = to_;
+    constexpr static unsigned long from = from_;
+    constexpr static unsigned long to = to_;
 
     constexpr static bool is_satisfied(std::string_view s) {
         return (s.length() >= from) && (s.length() <= to) ;
@@ -165,13 +165,13 @@ struct ValidGender {
 
 
 /* ------------ Int ----------- */
-template<int from_ = 0, int to_ = from_>
+template<unsigned long from_ = 0, unsigned long to_ = from_>
 struct Between { 
     using value_type = int;
     Between() = delete;
 
-    constexpr static int from = from_;
-    constexpr static int to = to_;
+    constexpr static unsigned long from = from_;
+    constexpr static unsigned long to = to_;
 
     constexpr static bool is_satisfied(int x) {
         return (x >= from) && (x <= to);

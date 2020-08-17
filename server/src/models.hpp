@@ -20,11 +20,18 @@ struct User final : Model<User> {
     Field<int32_t> permission_group;
 };
 
-/* Request Parameters Models */
-struct Id final : Model<Id> {
-    Field<int32_t> id;
-}; 
+/* Models for Database */
+struct Photo final : Model<Photo> {
+    Field<int32_t, cnstr::Unique> id;
+    Field<std::string, cnstr::Length<1,20>, cnstr::Required> type;
+    Field<std::string, cnstr::Length<1,255>, cnstr::Required> title;
+    Field<std::string, cnstr::Length<0,255>, cnstr::Required> category;
+    Field<std::string, cnstr::Length<0,4096>> description;
+    Field<int32_t, cnstr::Required,cnstr::Unique> added_by;
+};
 
+
+/* Request Parameters Models */
 struct RefreshToken final : Model<RefreshToken> {
     Field<std::string> refresh_token;
 }; 
@@ -63,12 +70,17 @@ REFL_AUTO(
   field(permission_group)
 )
 
-/* Request Parameters Models */
 REFL_AUTO(
-  type(rs::model::Id),
-  field(id)
+    type(rs::model::Photo),
+    field(id),
+    field(type),
+    field(title),
+    field(category),
+    field(description),
+    field(added_by)
 )
 
+/* Request Parameters Models */
 REFL_AUTO(
   type(rs::model::RefreshToken),
   field(refresh_token)
@@ -90,7 +102,5 @@ REFL_AUTO(
   field(username),
   field(password)
 )
-
-
 
 #endif // RS_MODELS_HPP

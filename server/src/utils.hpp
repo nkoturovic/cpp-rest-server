@@ -1,11 +1,14 @@
 #ifndef RS_UTILS_HPP
 #define RS_UTILS_HPP
 
+#include <fstream>
 #include <string_view>
 #include <span>
 #include <restinio/router/easy_parser_router.hpp>
-
+#include <restinio/helpers/file_upload.hpp>
+#include <restinio/helpers/multipart_body.hpp>
 #include <boost/lexical_cast.hpp>
+#include <random>
 #include "errors.hpp"
 
 /* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
@@ -126,6 +129,90 @@ void register_api_reference_route(auto &router, std::string_view path) {
                .set_body(content)
                .done();
     });
+}
+
+int randint() {
+    std::random_device dev;
+    std::mt19937 rgen(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0,INT_MAX);
+    return dist(rgen); 
+}
+
+
+nlohmann::json extract_json_field(const restinio::request_handle_t & req) {
+    using namespace restinio::multipart_body;
+    const auto boundary = detect_boundary_for_multipart_body(*req, "multipart", "form-data" );
+    if (boundary) {
+       const auto parts = split_multipart_body(req->body(), *boundary );
+       for (restinio::string_view_t part : parts) {
+          const auto parsed_part = try_parse_part(part);
+          throw_if<InvalidParamsError>(!parsed_part.has_value(), "json field is empty");
+          throw_if<InvalidParamsError>(!parsed_part->fields.has_field("json"), "json field is empty");
+          return nlohmann::json{parsed_part->fields.get_field("json")};
+       }
+    }
+    throw_if<InvalidParamsError>(true, "json field not found");
+    return nullptr;
+}
+
+// Taken from https://github.com/Stiffstream/restinio/blob/master/dev/sample/file_upload/main.cpp
+// and modifed for purpose of this application
+static void store_file_to_disk(
+	std::string_view dest_folder,
+	std::string_view file_name,
+	std::string_view raw_content)
+{
+	std::ofstream dest_file;
+	dest_file.exceptions( std::ofstream::failbit );
+	dest_file.open(
+			fmt::format( "{}/{}", dest_folder, file_name ),
+			std::ios_base::out | std::ios_base::trunc | std::ios_base::binary );
+	dest_file.write( raw_content.data(), raw_content.size() );
+}
+
+// Taken from https://github.com/Stiffstream/restinio/blob/master/dev/sample/file_upload/main.cpp
+// and modifed for purpose of this application
+auto parse_file_field_multiform(const restinio::request_handle_t & req)
+{
+	using namespace restinio::file_upload;
+    std::optional<std::pair<std::optional<std::string>,std::string>> result_file;
+	enumerate_parts_with_files(
+        *req, [&](const part_description_t &part) {
+            if(part.name == "file") {
+                result_file.emplace(part.filename, part.body);
+            }
+            return handling_result_t::terminate_enumeration;
+        });
+
+    throw_if<InvalidParamsError>(!result_file.has_value(), "file field is required");
+    return *result_file;
+}
+
+auto parse_json_field_multiform(const restinio::request_handle_t & req)
+{
+	using namespace restinio::multipart_body;
+    std::optional<nlohmann::json> json;
+    auto hstatus = handling_result_t::continue_enumeration;
+	auto parts = enumerate_parts(
+        *req, [&](const parsed_part_t &part) {
+            part.fields.for_each_field([&](const restinio::http_header_field_t& f) {
+                if (hstatus == handling_result_t::stop_enumeration) {
+                    return;
+                } else if (auto pos = f.value().find("name=\""); pos != std::string::npos) {
+                    if ((f.value().length() - pos) >= 10) {
+                        std::string substr = f.value().substr(pos+6, 4);
+                        if (substr == "json") {
+                            json = nlohmann::json::parse(part.body);
+                            hstatus = handling_result_t::stop_enumeration;
+                        }
+                    }
+                }
+            });
+        return hstatus;
+    });
+
+    throw_if<InvalidParamsError>(!json.has_value(), "json field is required");
+    return *json;
 }
 } // ns rs
 
