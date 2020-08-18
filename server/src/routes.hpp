@@ -2,7 +2,6 @@
 #define RS_ROUTES_HPP
 
 #include <restinio/router/easy_parser_router.hpp>
-#include <filesystem>
 #include "router.hpp"
 #include "handler.hpp"
 #include "models.hpp"
@@ -37,6 +36,8 @@ inline void register_routes(rs::Router &router, soci::session &db)
           nlohmann::json err_msg; 
           for (const auto &d : duplicates) err_msg[d] = "Already exist in db";
           rs::throw_if<rs::InvalidParamsError>(!duplicates.empty(), std::move(err_msg));
+          user.join_date.opt_value = rs::iso_date_now();
+          user.permission_group.opt_value = static_cast<int32_t>(UserGroup::user);
           rs::actions::insert_model_into_db<rs::model::User>(std::move(auth_tok),
               {.owner_field_name = "id"}, db, "users", std::move(user));
           return rs::success_response("Registration sucessfully completed");
@@ -49,7 +50,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
 
    router.api_get(std::make_tuple("/api/photos"),
        [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
-           return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), {.owner_field_name = "added_by"}, db, "photos");
+           return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), {.owner_field_name = "uploaded_by"}, db, "photos");
    });
 
    router.epr->http_post(restinio::router::easy_parser_router::path_to_params("/api/photos"),
@@ -57,20 +58,22 @@ inline void register_routes(rs::Router &router, soci::session &db)
          return std::invoke(make_handler(
               [&](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
                   rs::model::Photo photo = rs::parse_json_field_multiform(req);
-                  auto [opt_fname, fbody] = rs::parse_file_field_multiform(req);
+                  auto infile = rs::parse_file_field_multiform(req);
+                  photo.upload_time.opt_value = rs::iso_date_time_now();
+                  photo.extension.opt_value = infile.file_extension;
                   photo.id.opt_value = rs::randint();
                   PermissionParams pp;
                   rs::grant_permission_params_from_auth_token(db, auth_tok, pp); 
-                  photo.added_by.opt_value = pp.user_id;
-                  if (opt_fname.has_value()) photo.type.opt_value = std::filesystem::path(*opt_fname).extension();
-                  else throw InvalidParamsError("File is not available, did you forget to send it?");
+                  photo.uploaded_by.opt_value = pp.user_id;
                   auto errs = photo.get_unsatisfied_constraints().transform(rs::model::cnstr::get_description);
                   rs::throw_if<rs::InvalidParamsError>(!errs.empty(), std::move(errs));
-                  auto duplicates = rs::actions::check_uniquenes_in_db(db, "photos", photo);
-                  rs::actions::insert_model_into_db<rs::model::Photo>(std::move(auth_tok),
-                      pp, db, "photos", std::move(photo));
+
                   rs::store_file_to_disk("static/photos/", 
-                          std::to_string(*photo.id.opt_value) + *photo.type.opt_value, fbody);
+                          std::to_string(*photo.id.opt_value) + *photo.extension.opt_value, infile.file_contents);
+                  
+                  rs::actions::insert_model_into_db<rs::model::Photo>(auth_tok,
+                          {.owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
+
                   return rs::success_response("Photo added sucessfully");
               }
           ), req);

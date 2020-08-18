@@ -3,12 +3,14 @@
 
 #include <fstream>
 #include <string_view>
+#include <filesystem>
 #include <span>
 #include <restinio/router/easy_parser_router.hpp>
 #include <restinio/helpers/file_upload.hpp>
 #include <restinio/helpers/multipart_body.hpp>
 #include <boost/lexical_cast.hpp>
 #include <random>
+#include <iomanip>
 #include "errors.hpp"
 
 /* This code is fixing boost::lexical_cast true -> 1 and false -> 0 */
@@ -131,14 +133,6 @@ void register_api_reference_route(auto &router, std::string_view path) {
     });
 }
 
-int randint() {
-    std::random_device dev;
-    std::mt19937 rgen(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0,INT_MAX);
-    return dist(rgen); 
-}
-
-
 nlohmann::json extract_json_field(const restinio::request_handle_t & req) {
     using namespace restinio::multipart_body;
     const auto boundary = detect_boundary_for_multipart_body(*req, "multipart", "form-data" );
@@ -153,6 +147,20 @@ nlohmann::json extract_json_field(const restinio::request_handle_t & req) {
     }
     throw_if<InvalidParamsError>(true, "json field not found");
     return nullptr;
+}
+
+std::string iso_date_now() {
+    std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::stringstream ss;
+    ss << std::put_time( std::localtime( &t ), "%F" );
+    return ss.str();
+}
+
+std::string iso_date_time_now() {
+    std::time_t t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::stringstream ss;
+    ss << std::put_time( std::localtime( &t ), "%FT%T%z" );
+    return ss.str();
 }
 
 // Taken from https://github.com/Stiffstream/restinio/blob/master/dev/sample/file_upload/main.cpp
@@ -170,21 +178,30 @@ static void store_file_to_disk(
 	dest_file.write( raw_content.data(), raw_content.size() );
 }
 
-// Taken from https://github.com/Stiffstream/restinio/blob/master/dev/sample/file_upload/main.cpp
-// and modifed for purpose of this application
-auto parse_file_field_multiform(const restinio::request_handle_t & req)
+struct MFile {
+    std::string file_name;
+    std::string file_extension;
+    std::string file_contents;
+};
+
+MFile parse_file_field_multiform(const restinio::request_handle_t & req)
 {
 	using namespace restinio::file_upload;
-    std::optional<std::pair<std::optional<std::string>,std::string>> result_file;
+    std::optional<MFile> result_file;
 	enumerate_parts_with_files(
         *req, [&](const part_description_t &part) {
-            if(part.name == "file") {
-                result_file.emplace(part.filename, part.body);
+            if(part.name == "file" && part.filename.has_value() 
+                    && !part.body.empty()) {
+                result_file = {
+                    .file_name = *part.filename,
+                    .file_contents = std::string{part.body}
+                };
             }
             return handling_result_t::terminate_enumeration;
         });
 
-    throw_if<InvalidParamsError>(!result_file.has_value(), "file field is required");
+    throw_if<InvalidParamsError>(!result_file.has_value(), "File is required");
+    result_file->file_extension = std::filesystem::path(result_file->file_name).extension();
     return *result_file;
 }
 
@@ -213,6 +230,13 @@ auto parse_json_field_multiform(const restinio::request_handle_t & req)
 
     throw_if<InvalidParamsError>(!json.has_value(), "json field is required");
     return *json;
+}
+
+int randint() {
+    std::random_device dev;
+    std::mt19937 rgen(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0,INT_MAX);
+    return dist(rgen); 
 }
 } // ns rs
 

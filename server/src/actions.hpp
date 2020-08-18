@@ -13,24 +13,24 @@ namespace rs::actions {
 template <rs::model::CModel M>
 std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_view table_name, M const& m) {
     std::vector<const char *> duplicates;
-    std::apply([&](auto&&... fs) { 
+    std::apply([&]<typename ...Fs>(Fs&&... fs) { 
         constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
         auto it = std::begin(ns);
         ((std::invoke(
-           [&](auto &&f) { 
+           [&](const auto &f) { 
               if (f.opt_value.has_value()) {
                   int count = 0;
-                  db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, std::move(*f.opt_value)), soci::into(count);
+                  db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, *f.opt_value), soci::into(count);
                   if (count) duplicates.push_back(*it);
                };
-           }, fs), it++), ...);
+           }, std::forward<Fs>(fs)), it++), ...);
     }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
 
 template <rs::model::CModel M>
 std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, std::string_view attr = "*", std::string_view filter = "") {
-    AuthorizedModelAccess<M> model_access(permission::READ, auth_tok, std::move(pp), db, table_name);
+    AuthorizedModelAccess<M> model_access(permission::READ, auth_tok, pp, db, table_name);
     auto filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
     soci::statement get_models_stmt = (db.prepare << 
         fmt::format("SELECT {} FROM {} {}", attr, table_name, std::move(filter_stmt)), soci::into(model_access.unsafe_ref()));
@@ -38,7 +38,7 @@ std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionPa
     std::vector<M> models; models.reserve(get_models_stmt.get_affected_rows());
 
     while (get_models_stmt.fetch()) {
-        models.push_back(std::move(model_access.get_safely()));
+        models.push_back(std::move(model_access.move_safely()));
     }
 
     return models;
@@ -46,16 +46,17 @@ std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionPa
 
 template <rs::model::CModel M>
 void insert_model_into_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, M &&m) {
-    AuthorizedModelAccess model_access(permission::CREATE, auth_tok, std::move(pp), db, table_name, std::move(m));
+    AuthorizedModelAccess model_access(permission::CREATE, auth_tok, pp, db, table_name, std::move(m));
+
     std::array<std::string, M::num_of_fields()> vs;
     auto it = std::begin(vs);
-    std::apply([&](auto&&... fs) {
-        ((*it = std::invoke([&](auto && f) {
+    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+        ((*it = std::invoke([&](const auto& f) {
                return f.opt_value.has_value()
-                      ? fmt::format("'{}'", std::move(*f.opt_value))
+                      ? fmt::format("'{}'", *f.opt_value)
                       : "NULL";
-        }, fs), it++), ...);
-    }, model_access.get_safely().fields());
+        }, std::forward<Fs>(fs)), it++), ...);
+    }, model_access.move_safely().fields());
 
     db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
               fmt::join(M::field_names(), ","),

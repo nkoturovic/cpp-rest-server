@@ -115,7 +115,7 @@ void grant_permission_params_from_auth_token(soci::session &db, const model::Aut
 template <model::CModel M>
 class AuthorizedModelAccess {
     using permissions_matrix_t = std::array<std::array<uint8_t, M::num_of_fields()+1>,rs::num_of_user_groups>;
-    M &&m_model;
+    M m_model;
     uint8_t m_desired_permissions;
     PermissionParams m_permission_params;
     permissions_matrix_t m_permissions_matrix;
@@ -186,9 +186,19 @@ class AuthorizedModelAccess {
         check_instance_permissions();
     }
 
-    M&& get_safely() {
+    M get_safely() {
         erase_unauthorized_fields();
-        return std::move(m_model);
+        return m_model;
+    }
+
+    M move_safely() {
+        erase_unauthorized_fields();
+        M tmp = std::move(m_model);
+
+        for (auto i=0u; i < M::num_of_fields(); i++)
+            m_model.template erase_value(i);
+        
+        return tmp;
     }
 
     M& unsafe_ref() {

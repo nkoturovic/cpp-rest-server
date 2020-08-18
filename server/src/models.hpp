@@ -23,13 +23,13 @@ struct User final : Model<User> {
 /* Models for Database */
 struct Photo final : Model<Photo> {
     Field<int32_t, cnstr::Unique> id;
-    Field<std::string, cnstr::Length<1,20>, cnstr::Required> type;
+    Field<std::string, cnstr::Required> extension;
     Field<std::string, cnstr::Length<1,255>, cnstr::Required> title;
     Field<std::string, cnstr::Length<0,255>, cnstr::Required> category;
     Field<std::string, cnstr::Length<0,4096>> description;
-    Field<int32_t, cnstr::Required,cnstr::Unique> added_by;
+    Field<int32_t,cnstr::Unique> uploaded_by;
+    Field<std::string> upload_time;
 };
-
 
 /* Request Parameters Models */
 struct RefreshToken final : Model<RefreshToken> {
@@ -73,11 +73,12 @@ REFL_AUTO(
 REFL_AUTO(
     type(rs::model::Photo),
     field(id),
-    field(type),
+    field(extension),
     field(title),
     field(category),
     field(description),
-    field(added_by)
+    field(uploaded_by),
+    field(upload_time)
 )
 
 /* Request Parameters Models */

@@ -4,6 +4,8 @@
 #include <optional>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include <boost/hana.hpp>
+namespace hana = boost::hana;
 
 #include "constraint.hpp"
 #include "utils.hpp" // type_name
@@ -12,7 +14,7 @@ namespace rs::model {
 
 struct FieldDescription {
     const char * type;
-    std::vector<const char *> cnstr_names;
+    std::vector<std::string_view> cnstr_names;
 };
 
 void to_json(nlohmann::json& j, const FieldDescription& pd) {
@@ -33,7 +35,7 @@ struct Field {
 
     [[nodiscard]] static FieldDescription get_description() {
         return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...x) {
-            return std::vector<const char *>{cnstr::get_name.template operator()<typename X::type>()...};
+            return std::vector<std::string_view>{cnstr::get_name.template operator()<typename X::type>()...};
         })}; 
     }
 

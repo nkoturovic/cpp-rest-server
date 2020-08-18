@@ -6,39 +6,7 @@
 #include <any>
 #include <concepts>
 #include <regex>
-
-#include <boost/hana.hpp>
-namespace hana = boost::hana;
-
-//#include "utils.hpp"
-
-namespace rs {
-/* Helper for conversion from integral constant to hana string */
-constexpr size_t get_magnitude(size_t num) {
-  unsigned i = 0;
-  while (num > 0) {
-    num /= 10;
-    ++i;
-  }
-  return i;
-}
-
-template <typename X, size_t ...i>
-constexpr auto to_hana_string(X x,
-                         std::index_sequence<i...>) {
-  constexpr size_t mag = get_magnitude(X::value);
-  return hana::string<
-    (x / hana::power(hana::size_c<10>,
-                     hana::size_c<mag - i - 1>) % hana::size_c<10> 
-                       + hana::size_c<48>)...>{};
-}
-
-template <typename X>
-constexpr auto to_hana_string(X /*x*/) {
-  return to_hana_string(hana::size_c<static_cast<size_t>(X::value)>,
-                   std::make_index_sequence<get_magnitude(X::value)>());
-}
-}
+#include <fmt/format.h>
 
 namespace rs::model::cnstr {
 
@@ -46,8 +14,8 @@ namespace rs::model::cnstr {
 template<typename C>
 concept Cnstr = requires(typename C::value_type t) {
     { C::is_satisfied(t) } -> std::same_as<bool>;
-    { C::name } -> std::convertible_to<const char *>;
-    { C::description } -> std::convertible_to<const char *>;
+    { C::name } -> std::convertible_to<std::string_view>;
+    { C::description } -> std::convertible_to<std::string_view>;
 };
 
 /* --------- Constraints --------- */
@@ -145,10 +113,8 @@ struct Length {
     constexpr static bool is_satisfied(std::string_view s) {
         return (s.length() >= from) && (s.length() <= to) ;
     }
-    constexpr static const char * name = (BOOST_HANA_STRING("Length(") + rs::to_hana_string(hana::int_c<from>) + BOOST_HANA_STRING(",")
-                                                                          + rs::to_hana_string(hana::int_c<to>) + BOOST_HANA_STRING(")")).c_str();
-    constexpr static const char * description = (BOOST_HANA_STRING("Length should be from ") + rs::to_hana_string(hana::int_c<from>) + 
-                                                     BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
+    inline static std::string name = fmt::format("Length({},{})", from, to);
+    inline static std::string description = fmt::format("Length should be from {} to {}", from, to);
 };
 
 struct ValidGender {
@@ -176,19 +142,15 @@ struct Between {
     constexpr static bool is_satisfied(int x) {
         return (x >= from) && (x <= to);
     }
-
-    constexpr static const char * name = (BOOST_HANA_STRING("Between(") + rs::to_hana_string(hana::int_c<from>) + BOOST_HANA_STRING(",")
-                                                                          + rs::to_hana_string(hana::int_c<to>) + BOOST_HANA_STRING(")")).c_str();
-
-    constexpr static const char * description = (BOOST_HANA_STRING("Value should be in range from ") + rs::to_hana_string(hana::int_c<from>) + 
-                                                     BOOST_HANA_STRING(" to ") + rs::to_hana_string(hana::int_c<to>)).c_str();
+    inline static std::string name = fmt::format("Between({},{})", from, to);
+    inline static std::string description = fmt::format("Value should be in range from {} to {}", from, to);
 };
 
-constexpr auto get_description = []<Cnstr C>() -> const char * {
+constexpr auto get_description = []<Cnstr C>() -> std::string_view {
     return C::description;
 };
 
-constexpr auto get_name = []<Cnstr C>() -> const char * {
+constexpr auto get_name = []<Cnstr C>() -> std::string_view {
         return C::name;
 };
 
