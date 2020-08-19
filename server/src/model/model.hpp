@@ -79,14 +79,21 @@ public:
 
     template <typename Func, typename ... Args>
     auto transform(Func && f, Args &&...args) const {
-        using vec_type = std::vector<decltype(f.template operator()<cnstr::Void>(args...))>;
-        std::unordered_map<const char *, vec_type> result_map; result_map.reserve(std::tuple_size_v<decltype(cs)>);
-        hana::for_each(cs, [&](auto c) {
-            vec_type result_vec = c.second.transform(std::forward<Func>(f), std::forward<Args>(args)...);
-            if (result_vec.size())
-                 result_map[c.first] = std::move(result_vec);
-        });
-        return result_map;
+        using result_t = decltype(f.template operator()<cnstr::Void>(args...));
+        if constexpr (std::is_same_v<result_t, void>) {
+            hana::for_each(cs, [&](auto c) {
+                c.second.transform(std::forward<Func>(f), std::forward<Args>(args)...);
+            });
+        } else {
+            using vec_type = std::vector<result_t>;
+            std::unordered_map<const char *, vec_type> result_map; result_map.reserve(std::tuple_size_v<decltype(cs)>);
+            hana::for_each(cs, [&](auto c) {
+                vec_type result_vec = c.second.transform(std::forward<Func>(f), std::forward<Args>(args)...);
+                if (result_vec.size())
+                     result_map[c.first] = std::move(result_vec);
+            });
+            return result_map;
+        }
     }
 };
 

@@ -30,8 +30,8 @@ std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_v
 
 template <rs::model::CModel M>
 std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, std::string_view attr = "*", std::string_view filter = "") {
-    AuthorizedModelAccess<M> model_access(permission::READ, auth_tok, pp, db, table_name);
-    auto filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
+    AuthorizedModelAccess model_access(permission::READ, auth_tok, pp, db, table_name, M{});
+    std::string filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
     soci::statement get_models_stmt = (db.prepare << 
         fmt::format("SELECT {} FROM {} {}", attr, table_name, std::move(filter_stmt)), soci::into(model_access.unsafe_ref()));
     get_models_stmt.execute();
@@ -61,6 +61,40 @@ void insert_model_into_db(const model::AuthToken &auth_tok, PermissionParams pp,
     db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
               fmt::join(M::field_names(), ","),
               fmt::join(std::move(vs), ","));
+}
+
+template <rs::model::CModel M>
+void delete_models_from_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, std::string_view filter, M &&m) {
+    AuthorizedModelAccess model_access(permission::DELETE, auth_tok, pp, db, table_name, std::move(m));
+    std::string filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
+    std::string eq_str; unsigned i =0;
+    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+        ((std::invoke([&](const auto& f) {
+           if (f.opt_value.has_value()) {
+               if (eq_str.empty()) eq_str.append(fmt::format("{}='{}'", M::field_name(i), *f.opt_value));
+               else eq_str.append(fmt::format(",{}='{}'", M::field_name(i), *f.opt_value));
+           }
+        }, std::forward<Fs>(fs)), i++), ...);
+    }, model_access.move_safely().fields());
+    rs::throw_if<InvalidParamsError>(eq_str.empty(), "No valid filter parameters");
+    db << fmt::format("DELETE FROM {} WHERE {}", table_name, std::move(eq_str), std::move(filter_stmt));
+}
+
+template <rs::model::CModel M>
+void modify_models_in_db(const model::AuthToken &auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, std::string_view filter, M &&m) {
+    AuthorizedModelAccess model_access(permission::UPDATE, auth_tok, pp, db, table_name, std::move(m));
+    std::string filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
+    std::string set_str; unsigned i =0;
+    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+        ((std::invoke([&](const auto& f) {
+           if (f.opt_value.has_value()) {
+               if (set_str.empty()) set_str.append(fmt::format("{}='{}'", M::field_name(i), *f.opt_value));
+               else set_str.append(fmt::format(",{}='{}'", M::field_name(i), *f.opt_value));
+           }
+        }, std::forward<Fs>(fs)), i++), ...);
+    }, model_access.move_safely().fields());
+    rs::throw_if<InvalidParamsError>(set_str.empty(), "No valid parameters to modify");
+    db << fmt::format("UPDATE {} SET {} {}", table_name, std::move(set_str), std::move(filter_stmt));
 }
 
 model::RefreshAndAuthTokens login(soci::session &db, const model::UserCredentials &credentials) {

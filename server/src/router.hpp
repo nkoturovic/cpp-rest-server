@@ -51,7 +51,7 @@ public:
                }
        });
 
-       auto wrapped_handler = make_handler(std::forward<Handler>(handler));
+       auto wrapped_handler = make_api_handler(std::forward<Handler>(handler));
        using wrapped_handler_t = decltype(wrapped_handler);
 
        registered_routes_info.push_back(

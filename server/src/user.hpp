@@ -123,7 +123,7 @@ class AuthorizedModelAccess {
     void check_instance_permissions() {
         uint8_t group_instance_perms = m_permissions_matrix[static_cast<uint8_t>(m_permission_params.group_id)][0];
         uint8_t owner_instance_perms = m_permissions_matrix[static_cast<uint8_t>(UserGroup::owner)][0];
-
+        
         bool have_group_perms = have_permissions(m_desired_permissions, group_instance_perms);
         bool have_owner_perms = m_permission_params.user_id.has_value() && m_permission_params.owner_field_name.has_value()
                               && have_permissions(m_desired_permissions, owner_instance_perms);
@@ -159,8 +159,9 @@ class AuthorizedModelAccess {
     void erase_unauthorized_fields() {
         auto perms = m_permissions_matrix[static_cast<unsigned>(m_permission_params.group_id)];
         if (m_permission_params.owner_field_name.has_value() && m_permission_params.user_id.has_value()) {
-            auto resource_owner_id = m_model.template field_opt_value<std::optional<int>>(M::field_index(m_permission_params.owner_field_name->c_str()));
-            if (resource_owner_id == *m_permission_params.user_id) {
+            std::optional<int32_t>& resource_owner_id = 
+                m_model.template field_opt_value<int32_t>(M::field_index(m_permission_params.owner_field_name->c_str()));
+            if (resource_owner_id.has_value() && *resource_owner_id == *m_permission_params.user_id) {
                 std::transform(std::cbegin(perms), std::cend(perms), 
                                std::cbegin(m_permissions_matrix[static_cast<uint8_t>(UserGroup::owner)]),
                                std::begin(perms), std::bit_or{});
@@ -177,7 +178,7 @@ class AuthorizedModelAccess {
         rs::throw_if<UnauthorizedError>(num_of_erased_fields == M::num_of_fields(), permissions_to_json(m_desired_permissions));
     }
     public:
-    AuthorizedModelAccess(uint8_t desired_permissions, model::AuthToken auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, M &&m = {}) 
+    AuthorizedModelAccess(uint8_t desired_permissions, model::AuthToken auth_tok, PermissionParams pp, soci::session &db, std::string_view table_name, M &&m) 
         : m_model(std::move(m)),
           m_desired_permissions(desired_permissions),
           m_permission_params(std::move(pp)) {

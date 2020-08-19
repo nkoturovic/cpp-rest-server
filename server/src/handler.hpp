@@ -120,7 +120,7 @@ public:
 };
 
 template <class Func>
-auto make_handler(Func &&f)
+auto make_api_handler(Func &&f)
 {
     using traits = rs::function_traits<Func>;
     using arg_type = typename traits:: template arg<0>::type;
