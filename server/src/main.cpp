@@ -38,12 +38,12 @@ int main(int argc, char * argv[])
             restinio::null_logger_t,
             restinio::router::easy_parser_router_t>;
 
-    router.api_get(std::make_tuple("/api/help_json"), 
+    router.api_get(std::make_tuple("/help_json"), 
         [&router](rs::model::Empty&&, rs::model::AuthToken&&) -> nlohmann::json {
             return router.registered_routes_info;
     });
 
-    rs::register_api_reference_route(router, "/api/help");
+    rs::register_api_reference_route(router, "/help");
 
     restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
                  .address(server_address)

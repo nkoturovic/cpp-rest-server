@@ -15,12 +15,12 @@ inline void register_routes(rs::Router &router, soci::session &db)
 {
     namespace epr = restinio::router::easy_parser_router;
 
-   router.api_get(std::make_tuple("/api/users"),
+   router.api_get(std::make_tuple("/users"),
        [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
            return rs::actions::get_models_from_db<rs::model::User>(std::move(auth_tok), {.owner_field_name = "id"}, db, "users");
    });
 
-   router.api_get(std::make_tuple("/api/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+   router.api_get(std::make_tuple("/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
       [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
           auto vec = rs::actions::get_models_from_db<rs::model::User>(std::move(auth_tok),
                          {.owner_field_name = "id"}, db, "users", "*", fmt::format("id = {}", id));
@@ -28,7 +28,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
           return vec.back();
    });
 
-   router.api_post(std::make_tuple("/api/users"), 
+   router.api_post(std::make_tuple("/users"), 
       [&db](rs::model::User &&user, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
           auto errs = user.get_unsatisfied_constraints().transform(rs::model::cnstr::get_description);
           rs::throw_if<rs::InvalidParamsError>(!errs.empty(), std::move(errs));
@@ -43,7 +43,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
           return rs::success_response("Registration sucessfully completed");
    });
 
-   router.api_put(std::make_tuple("/api/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+   router.api_put(std::make_tuple("/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](rs::model::User&& u, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
            u.get_unsatisfied_constraints().transform(
                []<model::cnstr::Cnstr C>() -> void {
@@ -57,7 +57,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
           return rs::success_response("User informations updated");
    });
 
-   router.api_delete(std::make_tuple("/api/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+   router.api_delete(std::make_tuple("/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
            rs::model::User u { .id = {id} }; 
            rs::actions::delete_models_from_db(std::move(auth_tok),
@@ -66,18 +66,18 @@ inline void register_routes(rs::Router &router, soci::session &db)
           return rs::success_response(fmt::format("User with id {} deleted", id));
    });
 
-   router.api_post(std::make_tuple("/api/login"),
+   router.api_post(std::make_tuple("/login"),
        [&db](rs::model::UserCredentials&& cds, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
            throw_if<UnauthorizedError>(auth_tok.auth_token.opt_value.has_value(), "You are already logged in");
            return rs::actions::login(db, cds);
    });
 
-   router.api_get(std::make_tuple("/api/photos"),
+   router.api_get(std::make_tuple("/photos"),
        [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
            return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), {.owner_field_name = "uploaded_by"}, db, "photos");
    });
 
-   router.epr->http_post(restinio::router::easy_parser_router::path_to_params("/api/photos"),
+   router.epr->http_post(restinio::router::easy_parser_router::path_to_params("/photos"),
       [&db](const restinio::request_handle_t &req) {
          return std::invoke(make_api_handler(
               [&](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
@@ -103,7 +103,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
           ), req);
    });
 
-   router.api_put(std::make_tuple("/api/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+   router.api_put(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](rs::model::Photo&& p, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
            p.get_unsatisfied_constraints().transform(
                []<model::cnstr::Cnstr C>() -> void {
@@ -124,7 +124,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
           return rs::success_response("Photo informations updated");
    });
 
-   router.api_delete(std::make_tuple("/api/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+   router.api_delete(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
            rs::model::Photo p { .id = {id} }; 
 
