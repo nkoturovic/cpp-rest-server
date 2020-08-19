@@ -13,17 +13,17 @@ namespace rs::actions {
 template <rs::model::CModel M>
 std::vector<const char *> check_uniquenes_in_db(soci::session &db, std::string_view table_name, M const& m) {
     std::vector<const char *> duplicates;
-    std::apply([&]<typename ...Fs>(Fs&&... fs) { 
+    std::apply([&](const auto&... fs) { 
         constexpr auto ns = M::template field_names_having_cnstr<model::cnstr::Unique>();
         auto it = std::begin(ns);
         ((std::invoke(
-           [&](const auto &f) { 
+           [&](const auto& f) { 
               if (f.opt_value.has_value()) {
                   int count = 0;
                   db << fmt::format("SELECT COUNT(*) FROM {} WHERE {}='{}'", table_name, *it, *f.opt_value), soci::into(count);
                   if (count) duplicates.push_back(*it);
                };
-           }, std::forward<Fs>(fs)), it++), ...);
+           }, fs), it++), ...);
     }, m.template fields_having_cnstr<rs::model::cnstr::Unique>());
     return duplicates;
 }
@@ -50,12 +50,12 @@ void insert_model_into_db(const model::AuthToken &auth_tok, PermissionParams pp,
 
     std::array<std::string, M::num_of_fields()> vs;
     auto it = std::begin(vs);
-    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+    std::apply([&](const auto&... fs) {
         ((*it = std::invoke([&](const auto& f) {
                return f.opt_value.has_value()
                       ? fmt::format("'{}'", *f.opt_value)
                       : "NULL";
-        }, std::forward<Fs>(fs)), it++), ...);
+        }, fs), it++), ...);
     }, model_access.move_safely().fields());
 
     db << fmt::format("INSERT INTO {} ({}) VALUES({})", table_name,
@@ -68,13 +68,13 @@ void delete_models_from_db(const model::AuthToken &auth_tok, PermissionParams pp
     AuthorizedModelAccess model_access(permission::DELETE, auth_tok, pp, db, table_name, std::move(m));
     std::string filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
     std::string eq_str; unsigned i =0;
-    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+    std::apply([&](const auto&... fs) {
         ((std::invoke([&](const auto& f) {
            if (f.opt_value.has_value()) {
                if (eq_str.empty()) eq_str.append(fmt::format("{}='{}'", M::field_name(i), *f.opt_value));
                else eq_str.append(fmt::format(",{}='{}'", M::field_name(i), *f.opt_value));
            }
-        }, std::forward<Fs>(fs)), i++), ...);
+        }, fs), i++), ...);
     }, model_access.move_safely().fields());
     rs::throw_if<InvalidParamsError>(eq_str.empty(), "No valid filter parameters");
     db << fmt::format("DELETE FROM {} WHERE {}", table_name, std::move(eq_str), std::move(filter_stmt));
@@ -85,13 +85,13 @@ void modify_models_in_db(const model::AuthToken &auth_tok, PermissionParams pp, 
     AuthorizedModelAccess model_access(permission::UPDATE, auth_tok, pp, db, table_name, std::move(m));
     std::string filter_stmt = filter.empty() ? "" : fmt::format("WHERE {}", filter);
     std::string set_str; unsigned i =0;
-    std::apply([&]<typename ...Fs>(Fs&&... fs) {
+    std::apply([&](const auto&... fs) {
         ((std::invoke([&](const auto& f) {
            if (f.opt_value.has_value()) {
                if (set_str.empty()) set_str.append(fmt::format("{}='{}'", M::field_name(i), *f.opt_value));
                else set_str.append(fmt::format(",{}='{}'", M::field_name(i), *f.opt_value));
            }
-        }, std::forward<Fs>(fs)), i++), ...);
+        }, fs), i++), ...);
     }, model_access.move_safely().fields());
     rs::throw_if<InvalidParamsError>(set_str.empty(), "No valid parameters to modify");
     db << fmt::format("UPDATE {} SET {} {}", table_name, std::move(set_str), std::move(filter_stmt));
