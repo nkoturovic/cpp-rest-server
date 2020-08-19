@@ -89,6 +89,22 @@ struct ValidPassword {
                                                 " one lowercase letter and one number";
 };
 
+struct ValidImageExtension {
+    using value_type = std::string;
+    ValidImageExtension() = delete;
+
+    static bool is_satisfied(const std::string& s) {
+        const std::regex pattern
+                //(R"(([^\s]*(\.(?i)(jpe?g|png|gif|bmp))$))");
+                (R"(\.(jpe?g|png|gif|bmp))");
+        return std::regex_match(s, pattern);
+    }
+    constexpr static const char * name = "ValidImageExtension";
+    constexpr static const char * description = "image file extension must start with dot(.)"
+                                                " and have any one of the following extensions:"
+                                                " jpg, jpeg, png, gif, bmp.";
+};
+
 struct ISOdate {
     using value_type = std::string;
     ISOdate() = delete;
