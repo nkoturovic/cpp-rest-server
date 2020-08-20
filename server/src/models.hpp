@@ -26,7 +26,7 @@ struct Photo final : Model<Photo> {
     Field<int32_t, cnstr::Unique> id;
     Field<std::string, cnstr::Required, cnstr::ValidImageExtension> extension;
     Field<std::string, cnstr::Length<1,255>, cnstr::Required> title;
-    Field<std::string, cnstr::Length<0,255>, cnstr::Required> category;
+    Field<std::string, cnstr::Length<0,255>, cnstr::Required, cnstr::ValidCategory> category;
     Field<std::string, cnstr::Length<0,4096>> description;
     Field<int32_t,cnstr::Unique> uploaded_by;
     Field<std::string> upload_time;

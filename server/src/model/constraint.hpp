@@ -105,6 +105,19 @@ struct ValidImageExtension {
                                                 " jpg, jpeg, png, gif, bmp.";
 };
 
+struct ValidCategory {
+    using value_type = std::string;
+    ValidCategory() = delete;
+
+    static bool is_satisfied(const std::string& s) {
+        const std::regex pattern
+                (R"((Nature|Landscape|Animal|Fashion|Technology|Architecture|Macro|Sport|Others))");
+        return std::regex_match(s, pattern);
+    }
+    constexpr static const char * name = "ValidCategory";
+    constexpr static const char * description = "must be one of the default category";
+};
+
 struct ISOdate {
     using value_type = std::string;
     ISOdate() = delete;
