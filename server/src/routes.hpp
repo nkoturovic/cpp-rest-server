@@ -98,7 +98,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
                   rs::actions::insert_model_into_db(auth_tok,
                           {.owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
 
-                  return rs::success_response(*photo.id.opt_value);
+                  return rs::success_response(std::to_string(*photo.id.opt_value));
               }
           ), req);
    });
