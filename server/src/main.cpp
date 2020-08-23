@@ -25,6 +25,8 @@ int main(int argc, char * argv[])
         [](auto req) {
             return req->create_response(restinio::status_not_found()).connection_close()
                        .append_header( restinio::http_field::content_type, "application/json" )
+                       .append_header(restinio::http_field::access_control_allow_origin, "*")
+                       .append_header(restinio::http_field::access_control_allow_credentials, "true")
                        .set_body(rs::NotFoundError("Route not found").json().dump())
                        .done();
     });

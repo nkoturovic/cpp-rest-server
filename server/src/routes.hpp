@@ -77,6 +77,18 @@ inline void register_routes(rs::Router &router, soci::session &db)
            return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), {.owner_field_name = "uploaded_by"}, db, "photos");
    });
 
+   router.api_get(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+       [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t photo_id) -> nlohmann::json {
+           return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
+                   {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("id = {}", photo_id));
+   });
+
+   router.api_get(std::make_tuple("/photos_by/", epr::non_negative_decimal_number_p<std::uint32_t>()),
+       [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t user_id) -> nlohmann::json {
+           return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
+                   {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("uploaded_by = {}", user_id));
+   });
+
    router.epr->http_post(restinio::router::easy_parser_router::path_to_params("/photos"),
       [&db](const restinio::request_handle_t &req) {
          return std::invoke(make_api_handler(

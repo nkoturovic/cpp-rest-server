@@ -69,12 +69,16 @@ public:
 
         return req->create_response(restinio::status_ok())
                    .append_header(restinio::http_field::content_type, "application/json")
+                   .append_header(restinio::http_field::access_control_allow_origin, "*")
+                   .append_header(restinio::http_field::access_control_allow_credentials, "true")
                    .set_body(resp_json.dump())
                    .done();
 
         } catch(const rs::Error &e) {
              return req->create_response(e.status())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
+                        .append_header(restinio::http_field::access_control_allow_origin, "*")
+                        .append_header(restinio::http_field::access_control_allow_credentials, "true")
                         .set_body(e.json().dump())
                         .done();
         } catch (const soci::soci_error &e) {
@@ -102,17 +106,23 @@ public:
             // // Maybe log somewhere: e.get_error_message(); or e.what();
             // const char * msg = msg_from_category(e.get_error_category());
              return req->create_response(restinio::status_internal_server_error())
+                    .append_header(restinio::http_field::access_control_allow_origin, "*")
+                    .append_header(restinio::http_field::access_control_allow_credentials, "true")
                     .append_header(restinio::http_field::content_type, "application/problem+json")
                     .set_body(rs::DBError(/*TODO:msg*/e.get_error_message()).json().dump())
                     .done();
         } catch (const std::exception &e) {
              return req->create_response(restinio::status_internal_server_error())
                         .append_header(restinio::http_field::content_type, "application/problem+json")
+                        .append_header(restinio::http_field::access_control_allow_origin, "*")
+                        .append_header(restinio::http_field::access_control_allow_credentials, "true")
                         .set_body(rs::OtherError(e.what()).json().dump())
                         .done();
         } catch (...) {
             return req->create_response(restinio::status_internal_server_error())
                     .append_header(restinio::http_field::content_type, "application/problem+json")
+                    .append_header(restinio::http_field::access_control_allow_origin, "*")
+                    .append_header(restinio::http_field::access_control_allow_credentials, "true")
                     .set_body(rs::OtherError().json().dump())
                     .done();
        }

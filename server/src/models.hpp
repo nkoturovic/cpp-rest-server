@@ -30,6 +30,7 @@ struct Photo final : Model<Photo> {
     Field<std::string, cnstr::Length<0,4096>> description;
     Field<int32_t,cnstr::Unique> uploaded_by;
     Field<std::string> upload_time;
+    Field<int32_t> is_private;
 };
 
 /* Request Parameters Models */
@@ -80,7 +81,8 @@ REFL_AUTO(
     field(category),
     field(description),
     field(uploaded_by),
-    field(upload_time)
+    field(upload_time),
+    field(is_private)
 )
 
 /* Request Parameters Models */
