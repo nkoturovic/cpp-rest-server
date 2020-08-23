@@ -111,7 +111,7 @@ struct ValidCategory {
 
     static bool is_satisfied(const std::string& s) {
         const std::regex pattern
-                (R"((Nature|Landscape|Animal|Fashion|Technology|Architecture|Macro|Sport|Others))");
+                (R"((Nature|Landscape|Animal|Fashion|Technology|Architecture|Macro|Sport|Other))");
         return std::regex_match(s, pattern);
     }
     constexpr static const char * name = "ValidCategory";
