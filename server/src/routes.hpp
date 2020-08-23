@@ -80,7 +80,7 @@ inline void register_routes(rs::Router &router, soci::session &db)
    router.api_get(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t photo_id) -> nlohmann::json {
            return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                   {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("id = {}", photo_id));
+                   {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("id = {}", photo_id)).back();
    });
 
    router.api_get(std::make_tuple("/photos_by/", epr::non_negative_decimal_number_p<std::uint32_t>()),
