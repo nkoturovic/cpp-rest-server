@@ -30,7 +30,7 @@ struct Photo final : Model<Photo> {
     Field<std::string, cnstr::Length<0,4096>> description;
     Field<int32_t,cnstr::Unique> uploaded_by;
     Field<std::string> upload_time;
-    Field<int32_t> is_private;
+    Field<int32_t, cnstr::Required, cnstr::Between<0,1>> is_private;
 };
 
 /* Request Parameters Models */
