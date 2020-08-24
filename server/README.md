@@ -9,6 +9,7 @@
 - **BoostHana** (metaprogramming): [https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html](https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html)
 - **nlohmann::json** (json): [https://github.com/nlohmann/json](https://github.com/nlohmann/json)
 - **SOCI** (DBAccessLib for SQL/sqlite): [https://github.com/SOCI/soci](https://github.com/SOCI/soci)
+- **cpp-jwt** (JWT encoding/decoding) [https://github.com/arun11299/cpp-jwt](https://github.com/arun11299/cpp-jwt)
 
 ## What are goals of this application?
 
