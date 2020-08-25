@@ -2,6 +2,7 @@
 #define RS_ROUTES_HPP
 
 #include <restinio/router/easy_parser_router.hpp>
+#include <filesystem>
 #include "router.hpp"
 #include "handler.hpp"
 #include "models.hpp"
@@ -106,11 +107,15 @@ inline void register_routes(rs::Router &router, soci::session &db)
 
                   rs::store_file_to_disk("static/photos/", 
                           std::to_string(*photo.id.opt_value) + *photo.extension.opt_value, infile.file_contents);
-                  
+
+                  auto cmd = fmt::format("convert -thumbnail 400x400 static/photos/{}{} static/photos/thumbnails/{}.jpg", 
+                                                *photo.id.opt_value, *photo.extension.opt_value, *photo.id.opt_value);
+                  std::system(cmd.c_str());
+ 
                   rs::actions::insert_model_into_db(auth_tok,
                           {.owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
 
-                  return rs::success_response(std::to_string(*photo.id.opt_value));
+                 return rs::success_response(std::to_string(*photo.id.opt_value));
               }
           ), req);
    });
@@ -133,23 +138,27 @@ inline void register_routes(rs::Router &router, soci::session &db)
            rs::actions::modify_models_in_db(std::move(auth_tok),
                {.owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
 
-          return rs::success_response("Photo informations updated");
+           return rs::success_response("Photo informations updated");
    });
 
    router.api_delete(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
        [&db](model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
-           rs::model::Photo p { .id = {id} }; 
+           model::Photo p { .id = {id} }; 
 
            auto vec = rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                   {.owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by", fmt::format("id = {}", id));
+                   {.owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by,extension", fmt::format("id = {}", id));
 
            throw_if<InvalidParamsError>(vec.empty(), "Photo with that id does not exist");
-           p.uploaded_by.opt_value = vec.back().uploaded_by.opt_value;
+           model::Photo db_photo = std::move(vec.back());
+           p.uploaded_by.opt_value = db_photo.uploaded_by.opt_value;
+
+           std::filesystem::remove(fmt::format("static/photos/{}{}", id, *db_photo.extension.opt_value));
+           std::filesystem::remove(fmt::format("static/photos/thumbnails/{}.jpg", id));
 
            rs::actions::delete_models_from_db(std::move(auth_tok),
                {.owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
 
-          return rs::success_response(fmt::format("Photo with id {} deleted", id));
+           return rs::success_response(fmt::format("Photo with id {} deleted", id));
    });
 }
 
