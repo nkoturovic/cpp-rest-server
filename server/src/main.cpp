@@ -1,5 +1,6 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
+#include <soci/connection-pool.h>
 
 #include <span>
 #include "router.hpp"
@@ -16,10 +17,16 @@ int main(int argc, char * argv[])
     auto server_address = args.address.value_or("localhost");
     auto server_port = args.port.value_or(3000u);
 
-    soci::session db(soci::sqlite3, "dbname=db.sqlite");
+    constexpr std::size_t pool_size = 16;
+
+    soci::connection_pool db_pool(pool_size);
+    for (size_t i = 0; i != pool_size; ++i) {
+        soci::session& sql = db_pool.at(i);
+        sql.open(soci::sqlite3, "dbname=db.sqlite");
+    }
 
     auto router = rs::Router(std::make_unique<restinio::router::easy_parser_router_t>());
-    rs::register_routes(router, db);
+    rs::register_routes(router, db_pool);
 
     router.epr->non_matched_request_handler(
         [](auto req) {
@@ -47,7 +54,7 @@ int main(int argc, char * argv[])
 
     rs::register_api_reference_route(router, "/help");
 
-    restinio::run(restinio::on_thread_pool<traits_t>(16) // Thread pool size is 16 threads.
+    restinio::run(restinio::on_thread_pool<traits_t>(pool_size) // Thread pool size is 16 threads.
                  .address(server_address)
                  .port(server_port)
                  .request_handler(std::move(router.epr)));
