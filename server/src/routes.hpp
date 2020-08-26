@@ -119,7 +119,7 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
                    rs::store_file_to_disk("static/photos/", 
                            std::to_string(*photo.id.opt_value) + *photo.extension.opt_value, infile.file_contents);
 
-                   auto cmd = fmt::format("convert -thumbnail 400x400 static/photos/{}{} static/photos/thumbnails/{}.jpg", 
+                   auto cmd = fmt::format("convert -thumbnail 800x800 static/photos/{}{} static/photos/thumbnails/{}.jpg", 
                                                  *photo.id.opt_value, *photo.extension.opt_value, *photo.id.opt_value);
                    std::system(cmd.c_str());
  
