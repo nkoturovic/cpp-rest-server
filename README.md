@@ -134,6 +134,7 @@ Generally things may work with some previous versions, but these are tested:
 ```bash
 git clone https://github.com/nkoturovic/cpp-rest-server
 cd cpp-rest-server && mkdir build && cd build
+conan remote add kotur https://api.bintray.com/conan/kotur/public-conan
 conan install ../conanfile.txt -s compiler.libcxx=libstdc++11 --build=missing
 cmake .. -DCMAKE_BUILD_TYPE=Release 
 make
