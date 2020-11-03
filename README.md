@@ -145,7 +145,6 @@ and then to execute: `cd bin && ./rest_server`
 
 Dependencies can be easily installed using Conan Package Manager, for more details look at Building section
 
-- c++20 compatible compiler (GCC/Clang)
 - **fmt-lib** (restinio dependency): [https://github.com/fmtlib/fmt](https://github.com/fmtlib/fmt)
 - **restinio** (HTTP Server + router): [https://github.com/Stiffstream/restinio](https://github.com/Stiffstream/restinio)
 - **refl-cpp** (Static reflection): [https://github.com/veselink1/refl-cpp](https://github.com/veselink1/refl-cpp)
