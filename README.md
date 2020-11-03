@@ -129,6 +129,24 @@ while (getUsersStmt.fetch())
 ...
 ```
 
-## Using and building APP
+## Install (Downloading, installing dependencies, building and running)
 
-Comming soon, stay tuned.
+### Requirements
+
+Generally things may work with some previous versions, but these are tested:
+
+- g++ 10.0.0 or higher: ([https://conan.io/](https://conan.io/))
+- CMake 3.16 or higher ([https://cmake.org/](https://cmake.org/))
+- Conan 1.31 or higher (Package Manager [https://conan.io/](https://conan.io/))
+
+### Building
+
+```bash
+git clone https://github.com/nkoturovic/cpp-rest-server
+cd cpp-rest-server && mkdir build && cd build
+conan install ../conanfile.txt -s compiler.libcxx=libstdc++11 --build=missing
+cmake .. -DCMAKE_BUILD_TYPE=Release 
+make
+```
+
+and then to execute: `cd bin && ./rest_server`
