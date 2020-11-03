@@ -1,15 +1,5 @@
 # C++ REST Server 
 
-## Dependencies
-
-- c++20 compatible compiler (GCC/Clang)
-- **fmt-lib** (restinio dependency): [https://github.com/fmtlib/fmt](https://github.com/fmtlib/fmt)
-- **restinio** (HTTP Server + router): [https://github.com/Stiffstream/restinio](https://github.com/Stiffstream/restinio)
-- **refl-cpp** (Static reflection): [https://github.com/veselink1/refl-cpp](https://github.com/veselink1/refl-cpp)
-- **BoostHana** (metaprogramming): [https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html](https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html)
-- **nlohmann::json** (json): [https://github.com/nlohmann/json](https://github.com/nlohmann/json)
-- **SOCI** (DBAccessLib for SQL/sqlite): [https://github.com/SOCI/soci](https://github.com/SOCI/soci)
-
 ## What are goals of this application?
 
 - Reducing boilerplate code and emracing DRY principle of programming.
@@ -129,13 +119,13 @@ while (getUsersStmt.fetch())
 ...
 ```
 
-## Install (Downloading, installing dependencies, building and running)
+## Installation
 
 ### Requirements
 
 Generally things may work with some previous versions, but these are tested:
 
-- g++ 10.0.0 or higher: ([https://conan.io/](https://conan.io/))
+- gcc (g++) 10.0.0 or higher: ([https://gcc.gnu.org/](https://gcc.gnu.org/))
 - CMake 3.16 or higher ([https://cmake.org/](https://cmake.org/))
 - Conan 1.31 or higher (Package Manager [https://conan.io/](https://conan.io/))
 
@@ -150,3 +140,15 @@ make
 ```
 
 and then to execute: `cd bin && ./rest_server`
+
+## Dependencies
+
+Dependencies can be easily installed using Conan Package Manager, for more details look at Building section
+
+- c++20 compatible compiler (GCC/Clang)
+- **fmt-lib** (restinio dependency): [https://github.com/fmtlib/fmt](https://github.com/fmtlib/fmt)
+- **restinio** (HTTP Server + router): [https://github.com/Stiffstream/restinio](https://github.com/Stiffstream/restinio)
+- **refl-cpp** (Static reflection): [https://github.com/veselink1/refl-cpp](https://github.com/veselink1/refl-cpp)
+- **BoostHana** (metaprogramming): [https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html](https://www.boost.org/doc/libs/1_73_0/libs/hana/doc/html/index.html)
+- **nlohmann::json** (json): [https://github.com/nlohmann/json](https://github.com/nlohmann/json)
+- **SOCI** (DBAccessLib for SQL/sqlite): [https://github.com/SOCI/soci](https://github.com/SOCI/soci)
