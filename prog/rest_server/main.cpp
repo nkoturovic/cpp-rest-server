@@ -6,7 +6,7 @@
 #include "router.hpp"
 #include "routes.hpp"
 #include "utils.hpp"
-#include "3rd_party/color.hpp"
+#include "color.hpp"
 
 using namespace restinio;
 

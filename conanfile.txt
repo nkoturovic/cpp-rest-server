@@ -2,10 +2,11 @@
 boost/1.74.0
 nlohmann_json/3.9.1
 restinio/0.6.11
-fmt/7.1.0
+fmt/7.1.2
+spdlog/1.8.1
+SOCI/4.0.1@kotur/stable
 cpp-jwt/1.2
 http-parser/2.8.1@bincrafters/stable
-SOCI/4.0.1@kotur/stable
 
 [options]
 SOCI:soci_cxx11=True
