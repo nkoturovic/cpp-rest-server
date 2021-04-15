@@ -121,11 +121,11 @@ while (getUsersStmt.fetch())
 
 ## Installation
 
-### Requirements
+### Requirements/Dependencies
 
 Generally things may work with some previous versions, but these are tested:
 
-- gcc (g++) 10.0.0 or higher: ([https://gcc.gnu.org/](https://gcc.gnu.org/))
+- gcc/clang (g++ 10.0.0 or higher equivalent): ([https://gcc.gnu.org/](https://gcc.gnu.org/))
 - CMake 3.16 or higher ([https://cmake.org/](https://cmake.org/))
 - Conan 1.31 or higher (Package Manager [https://conan.io/](https://conan.io/))
 
@@ -134,17 +134,15 @@ Generally things may work with some previous versions, but these are tested:
 ```bash
 git clone https://github.com/nkoturovic/cpp-rest-server
 cd cpp-rest-server && mkdir build && cd build
-conan remote add kotur https://api.bintray.com/conan/kotur/public-conan
-conan install ../conanfile.txt -s compiler.libcxx=libstdc++11 --build=missing
 cmake .. -DCMAKE_BUILD_TYPE=Release 
 make
 ```
 
 and then to execute: `cd bin && ./rest_server`
 
-## Dependencies
+## Libraries
 
-Dependencies can be easily installed using Conan Package Manager, for more details look at Building section
+Libraries are easily installed using Conan Package Manager, for more details look at Building section
 
 - **fmt-lib** (restinio dependency): [https://github.com/fmtlib/fmt](https://github.com/fmtlib/fmt)
 - **restinio** (HTTP Server + router): [https://github.com/Stiffstream/restinio](https://github.com/Stiffstream/restinio)
