@@ -41,7 +41,7 @@ namespace permission {
     constexpr uint8_t READ = 0b0100;
     constexpr uint8_t UPDATE = 0b0010;
     constexpr uint8_t DELETE = 0b0001;
-};
+}
 
 struct PermissionParams {
     rs::UserGroup group_id = UserGroup::guest;
@@ -77,7 +77,7 @@ nlohmann::json permissions_to_json(uint8_t perms) {
     nlohmann::json j;
     j["required_permissions"] = permissions_to_string(perms);
     return j;
-};
+}
 
 template <typename M>
 auto permission_matrix_json(auto ps) {
@@ -144,11 +144,11 @@ class AuthorizedModelAccess {
         soci::rowset<soci::row> rows = (db.prepare << fmt::format("SELECT * FROM {}", std::string{table_name} + "_permissions"));
         std::for_each(std::begin(rows), std::end(rows),
             [&](const auto &row) {
-                auto row_id = row.template get<int>("group_id");
-                m_permissions_matrix[row_id][0] = row.template get<int>("instance");
+                auto row_id = static_cast<long unsigned int>(row.template get<int>("group_id"));
+                m_permissions_matrix[row_id][0u] = static_cast<unsigned char>(row.template get<int>("instance"));
                 for (auto i = 0u; i < M::num_of_fields(); i++) {
                     try {
-                        m_permissions_matrix[row_id][i+1] = row.template get<int>(M::field_name(i));
+                        m_permissions_matrix[row_id][i+1] = static_cast<unsigned char>(row.template get<int>(M::field_name(i)));
                     } catch (const soci::soci_error &e) {
                         // Ignoring error if field does not exist
                     }
@@ -161,7 +161,7 @@ class AuthorizedModelAccess {
         if (m_permission_params.owner_field_name.has_value() && m_permission_params.user_id.has_value()) {
             std::optional<int32_t>& resource_owner_id = 
                 m_model.template field_opt_value<int32_t>(M::field_index(m_permission_params.owner_field_name->c_str()));
-            if (resource_owner_id.has_value() && *resource_owner_id == *m_permission_params.user_id) {
+            if (resource_owner_id.has_value() && *resource_owner_id == static_cast<int>(*m_permission_params.user_id)) {
                 std::transform(std::cbegin(perms), std::cend(perms), 
                                std::cbegin(m_permissions_matrix[static_cast<uint8_t>(UserGroup::owner)]),
                                std::begin(perms), std::bit_or{});

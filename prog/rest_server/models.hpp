@@ -9,14 +9,14 @@ namespace rs::model {
 /* Models for Database */
 struct User final : Model<User> {
     Field<int32_t, cnstr::Unique> id;
-    Field<std::string, cnstr::Unique, cnstr::Length<1,20>, cnstr::Required> username;
+    Field<std::string, cnstr::Unique, cnstr::Length<1u,20u>, cnstr::Required> username;
     Field<std::string, cnstr::Required, cnstr::ValidPassword > password;
     Field<std::string, cnstr::Unique, cnstr::Required, cnstr::ValidEmail> email;
-    Field<std::string, cnstr::Length<2,64>> firstname;
-    Field<std::string, cnstr::Length<2,64>> lastname;
+    Field<std::string, cnstr::Length<2u,64u>> firstname;
+    Field<std::string, cnstr::Length<2u,64u>> lastname;
     Field<std::string, cnstr::ISOdate > born;
     Field<std::string, cnstr::ValidGender> gender;
-    Field<std::string, cnstr::Length<0,8192>> biography;
+    Field<std::string, cnstr::Length<0u,8192u>> biography;
     Field<std::string, cnstr::ISOdate> join_date;
     Field<int32_t> permission_group;
 };
@@ -25,12 +25,12 @@ struct User final : Model<User> {
 struct Photo final : Model<Photo> {
     Field<int32_t, cnstr::Unique> id;
     Field<std::string, cnstr::Required, cnstr::ValidImageExtension> extension;
-    Field<std::string, cnstr::Length<1,255>, cnstr::Required> title;
-    Field<std::string, cnstr::Length<0,255>, cnstr::Required, cnstr::ValidCategory> category;
-    Field<std::string, cnstr::Length<0,4096>> description;
+    Field<std::string, cnstr::Length<1u,255u>, cnstr::Required> title;
+    Field<std::string, cnstr::Length<0u,255u>, cnstr::Required, cnstr::ValidCategory> category;
+    Field<std::string, cnstr::Length<0u,4096u>> description;
     Field<int32_t,cnstr::Unique> uploaded_by;
     Field<std::string> upload_time;
-    Field<int32_t, cnstr::Required, cnstr::Between<0,1>> is_private;
+    Field<int32_t, cnstr::Required, cnstr::Between<0u,1u>> is_private;
 };
 
 /* Request Parameters Models */
@@ -50,7 +50,7 @@ struct RefreshAndAuthTokens final : Model<RefreshAndAuthTokens> {
 
 /* Models for Database */
 struct UserCredentials final : Model<UserCredentials> {
-    Field<std::string, cnstr::Unique, cnstr::Length<1,20>, cnstr::Required> username;
+    Field<std::string, cnstr::Unique, cnstr::Length<1u,20u>, cnstr::Required> username;
     Field<std::string, cnstr::Required, cnstr::ValidPassword > password;
 };
 

@@ -20,7 +20,7 @@ void to_json(nlohmann::json &j, const RouteInfo& ri) {
     j["url"] = ri.url;
     j["method"] = ri.method_id.c_str();
     j["params"] = ri.params_description;
-};
+}
 
 class Router {
 private:

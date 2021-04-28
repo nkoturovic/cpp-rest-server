@@ -20,14 +20,14 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
     router.api_get(std::make_tuple("/users"),
         [&db_pool](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
             soci::session db(db_pool);
-            return rs::actions::get_models_from_db<rs::model::User>(std::move(auth_tok), {.owner_field_name = "id"}, db, "users");
+            return rs::actions::get_models_from_db<rs::model::User>(std::move(auth_tok), {.user_id = {}, .owner_field_name = "id"}, db, "users");
     });
 
     router.api_get(std::make_tuple("/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
         [&db_pool](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
             soci::session db(db_pool);
             auto vec = rs::actions::get_models_from_db<rs::model::User>(std::move(auth_tok),
-                           {.owner_field_name = "id"}, db, "users", "*", fmt::format("id = {}", id));
+                           {.user_id = {}, .owner_field_name = "id"}, db, "users", "*", fmt::format("id = {}", id));
             rs::throw_if<rs::NotFoundError>(vec.empty(), "User with that id is not found");
             return vec.back();
     });
@@ -44,7 +44,7 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
             user.join_date.opt_value = rs::iso_date_now();
             user.permission_group.opt_value = static_cast<int32_t>(UserGroup::user);
             rs::actions::insert_model_into_db(std::move(auth_tok),
-                {.owner_field_name = "id"}, db, "users", std::move(user));
+                {.user_id = {}, .owner_field_name = "id"}, db, "users", std::move(user));
             return rs::success_response("Registration sucessfully completed");
     });
 
@@ -58,17 +58,17 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
             u.id.opt_value = id;
             soci::session db(db_pool);
             rs::actions::modify_models_in_db(std::move(auth_tok),
-                {.owner_field_name = "id"}, db, "users", fmt::format("id = {}", id), std::move(u));
+                {.user_id = {}, .owner_field_name = "id"}, db, "users", fmt::format("id = {}", id), std::move(u));
 
            return rs::success_response("User informations updated");
     });
 
     router.api_delete(std::make_tuple("/users/", epr::non_negative_decimal_number_p<std::uint32_t>()),
         [&db_pool](model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
-            rs::model::User u { .id = {id} }; 
+            rs::model::User u; u.id.opt_value = id;
             soci::session db(db_pool);
             rs::actions::delete_models_from_db(std::move(auth_tok),
-                {.owner_field_name = "id"}, db, "users", fmt::format("id = {}", id), std::move(u));
+                {.user_id = {}, .owner_field_name = "id"}, db, "users", fmt::format("id = {}", id), std::move(u));
 
            return rs::success_response(fmt::format("User with id {} deleted", id));
     });
@@ -83,21 +83,22 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
     router.api_get(std::make_tuple("/photos"),
         [&db_pool](rs::model::Empty&&, rs::model::AuthToken &&auth_tok) -> nlohmann::json {
             soci::session db(db_pool);
-            return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), {.owner_field_name = "uploaded_by"}, db, "photos");
+            return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
+                    {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos");
     });
 
     router.api_get(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
         [&db_pool](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t photo_id) -> nlohmann::json {
             soci::session db(db_pool);
             return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                    {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("id = {}", photo_id)).back();
+                    {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("id = {}", photo_id)).back();
     });
 
     router.api_get(std::make_tuple("/photos_by/", epr::non_negative_decimal_number_p<std::uint32_t>()),
         [&db_pool](rs::model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t user_id) -> nlohmann::json {
             soci::session db(db_pool);
             return rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                    {.owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("uploaded_by = {}", user_id));
+                    {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", "*", fmt::format("uploaded_by = {}", user_id));
     });
 
     router.epr->http_post(restinio::router::easy_parser_router::path_to_params("/photos"),
@@ -124,7 +125,7 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
                    std::system(cmd.c_str());
  
                    rs::actions::insert_model_into_db(auth_tok,
-                           {.owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
+                           {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
 
                   return rs::success_response(std::to_string(*photo.id.opt_value));
                }
@@ -142,23 +143,23 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
 
             soci::session db(db_pool);
             auto vec = rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                    {.owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by", fmt::format("id = {}", id));
+                    {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by", fmt::format("id = {}", id));
 
             throw_if<InvalidParamsError>(vec.empty(), "Photo with that id does not exist");
             p.uploaded_by.opt_value = vec.back().uploaded_by.opt_value;
 
             rs::actions::modify_models_in_db(std::move(auth_tok),
-                {.owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
+                {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
 
             return rs::success_response("Photo informations updated");
     });
 
     router.api_delete(std::make_tuple("/photos/", epr::non_negative_decimal_number_p<std::uint32_t>()),
         [&db_pool](model::Empty&&, rs::model::AuthToken &&auth_tok, std::uint32_t id) -> nlohmann::json {
-            model::Photo p { .id = {id} }; 
+            model::Photo p; p.id.opt_value = id; 
             soci::session db(db_pool);
             auto vec = rs::actions::get_models_from_db<rs::model::Photo>(std::move(auth_tok), 
-                    {.owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by,extension", fmt::format("id = {}", id));
+                    {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", "uploaded_by,extension", fmt::format("id = {}", id));
 
             throw_if<InvalidParamsError>(vec.empty(), "Photo with that id does not exist");
             model::Photo db_photo = std::move(vec.back());
@@ -168,7 +169,7 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
             std::filesystem::remove(fmt::format("static/photos/thumbnails/{}.jpg", id));
 
             rs::actions::delete_models_from_db(std::move(auth_tok),
-                {.owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
+                {.user_id = {}, .owner_field_name = "uploaded_by"}, db, "photos", fmt::format("id = {}", id), std::move(p));
 
             return rs::success_response(fmt::format("Photo with id {} deleted", id));
     });

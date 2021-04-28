@@ -13,9 +13,9 @@ using namespace restinio;
 int main(int argc, char * argv[])
 {
     namespace epr = restinio::router::easy_parser_router;
-    auto args = rs::parse_cmdline_args(std::span(argv, argc));
+    auto args = rs::parse_cmdline_args(std::span(argv, static_cast<long unsigned>(argc)));
     auto server_address = args.address.value_or("localhost");
-    auto server_port = args.port.value_or(3000u);
+    auto server_port = static_cast<short unsigned int>(args.port.value_or(3000u));
 
     constexpr std::size_t pool_size = 16;
 

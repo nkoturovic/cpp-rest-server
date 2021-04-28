@@ -12,7 +12,7 @@ namespace rs {
 struct Error : std::exception {
     nlohmann::json info;
 
-    explicit Error(nlohmann::json &&info = {}) : info(std::move(info)) {}
+    explicit Error(nlohmann::json &&arg_info = {}) : info(std::move(arg_info)) {}
 
     [[nodiscard]] constexpr const char * what() const noexcept override {
         return this->msg().data();

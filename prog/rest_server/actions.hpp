@@ -35,7 +35,7 @@ std::vector<M> get_models_from_db(const model::AuthToken &auth_tok, PermissionPa
     soci::statement get_models_stmt = (db.prepare << 
         fmt::format("SELECT {} FROM {} {}", attr, table_name, std::move(filter_stmt)), soci::into(model_access.unsafe_ref()));
     get_models_stmt.execute();
-    std::vector<M> models; models.reserve(get_models_stmt.get_affected_rows());
+    std::vector<M> models; models.reserve(static_cast<long unsigned>(get_models_stmt.get_affected_rows()));
 
     while (get_models_stmt.fetch()) {
         models.push_back(std::move(model_access.move_safely()));
@@ -127,7 +127,11 @@ model::RefreshAndAuthTokens login(soci::session &db, const model::UserCredential
     }
 
     db << fmt::format("INSERT INTO refresh_tokens (user_id,refresh_token) VALUES('{}','{}')", *u.id.opt_value, refresh_token.signature());
-    return {.refresh_token = {refresh_token.signature()}, .auth_token = {auth_token.signature()}};
+
+    model::RefreshAndAuthTokens retval;
+    retval.refresh_token.opt_value = refresh_token.signature();
+    retval.auth_token.opt_value = auth_token.signature();
+    return retval;
 }
 
 } // ns rs::actions

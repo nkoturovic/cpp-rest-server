@@ -159,7 +159,7 @@ struct Model {
     }
 
     [[nodiscard]] static constexpr unsigned field_index(std::string_view field_name) {
-        unsigned index = -1;
+        unsigned index = UINT_MAX;
         refl::util::for_each(refl::member_list<Derived>{}, [&](auto member, unsigned curr_index) {
             if (field_name == member.name.c_str())
                 index = curr_index;
@@ -229,8 +229,8 @@ struct Model {
 
 struct Empty final : Model<Empty> {};
 
-void from_json(const nlohmann::json&, Empty&) {};
-void to_json(nlohmann::json&, const Empty&) {};
+void from_json(const nlohmann::json&, Empty&) {}
+void to_json(nlohmann::json&, const Empty&) {}
 
 }
 
@@ -242,7 +242,7 @@ template<rs::model::CModel M>
 struct soci::type_conversion<M>
 {
     using base_type = soci::values;
-    static void from_base(const soci::values &v, soci::indicator& ind, M &model)
+    static void from_base(const soci::values &v, soci::indicator& /*ind*/, M &model)
     {
         //rs::throw_if<rs::DBError>(ind == soci::i_null, "Null value not allowed for this type");
         refl::util::for_each(refl::reflect(model).members, [&](auto member) {

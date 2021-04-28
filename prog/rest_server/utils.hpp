@@ -51,7 +51,7 @@ nlohmann::json success_response(std::string_view info = "") {
     if (!info.empty())
         json["info"] = info;
     return json;
-};
+}
 
 template <CError E>
 constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
@@ -78,7 +78,7 @@ CmdLineArgs parse_cmdline_args(std::span<char *> args)
             result.port = std::strtoul(*it_next, nullptr, 10);
     }
     return result;
-};
+}
 
 template <typename T>
 struct function_traits
@@ -175,7 +175,7 @@ static void store_file_to_disk(
 	dest_file.open(
 			fmt::format( "{}/{}", dest_folder, file_name ),
 			std::ios_base::out | std::ios_base::trunc | std::ios_base::binary );
-	dest_file.write( raw_content.data(), raw_content.size() );
+	dest_file.write( raw_content.data(), static_cast<long int>(raw_content.size()) );
 }
 
 struct MFile {
@@ -194,6 +194,7 @@ MFile parse_file_field_multiform(const restinio::request_handle_t & req)
                     && !part.body.empty()) {
                 result_file = {
                     .file_name = *part.filename,
+                    .file_extension = "",
                     .file_contents = std::string{part.body}
                 };
             }
@@ -236,7 +237,7 @@ int randint() {
     std::random_device dev;
     std::mt19937 rgen(dev());
     std::uniform_int_distribution<std::mt19937::result_type> dist(0,INT_MAX);
-    return dist(rgen); 
+    return static_cast<int>(dist(rgen));
 }
 } // ns rs
 

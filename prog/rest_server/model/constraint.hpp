@@ -162,13 +162,13 @@ struct ValidGender {
 /* ------------ Int ----------- */
 template<unsigned long from_ = 0, unsigned long to_ = from_>
 struct Between { 
-    using value_type = int;
+    using value_type = long unsigned int;
     Between() = delete;
 
     constexpr static unsigned long from = from_;
     constexpr static unsigned long to = to_;
 
-    constexpr static bool is_satisfied(int x) {
+    constexpr static bool is_satisfied(long unsigned int x) {
         return (x >= from) && (x <= to);
     }
     inline static std::string name = fmt::format("Between({},{})", from, to);

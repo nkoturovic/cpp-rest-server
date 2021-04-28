@@ -20,7 +20,7 @@ struct FieldDescription {
 void to_json(nlohmann::json& j, const FieldDescription& pd) {
     j["type"] = pd.type;
     j["constraints"] = nlohmann::json(pd.cnstr_names);
-};
+}
 
 template <typename T, cnstr::Cnstr ...Cs>
 struct Field {
@@ -34,7 +34,7 @@ struct Field {
     }
 
     [[nodiscard]] static FieldDescription get_description() {
-        return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...x) {
+        return FieldDescription{rs::type_name<value_type>, hana::unpack(cnstr_list, []<typename ...X>(X ...) {
             return std::vector<std::string_view>{cnstr::get_name.template operator()<typename X::type>()...};
         })}; 
     }
@@ -47,7 +47,7 @@ struct Field {
                 if (m_value) /* If value is set, check all constraints */ {
                     hana::for_each(cnstr_list, [&](auto arg) {
                         using ArgT = typename decltype(arg)::type;
-                        if (!ArgT::is_satisfied(*m_value)) {
+                        if (!ArgT::is_satisfied(static_cast<typename ArgT::value_type>(*m_value))) {
                             f.template operator()<ArgT>(fargs...);
                         }
                     });
@@ -60,7 +60,7 @@ struct Field {
                 if (m_value) /* If value is set, check all constraints */ {
                     hana::for_each(cnstr_list, [&](auto arg) {
                         using ArgT = typename decltype(arg)::type;
-                        if (!ArgT::is_satisfied(*m_value)) {
+                        if (!ArgT::is_satisfied(static_cast<typename ArgT::value_type>(*m_value))) {
                             vec.push_back(f.template operator()<ArgT>(fargs...));
                         }
                     });
