@@ -140,17 +140,26 @@ struct Model {
         });
     }
 
-    [[nodiscard]] static auto get_description() {
-        static std::unordered_map<const char *, FieldDescription> result; result.reserve(Model::num_of_fields());
+    [[nodiscard]]  static const std::unordered_map<const char *, FieldDescription> get_description() {
+        static std::unordered_map<const char *, FieldDescription> result;
+        enum class CalcStatus : char { NotCalculated, Calculating, Done  };
+        static std::atomic<CalcStatus> calc_status = CalcStatus::NotCalculated;
 
-        if (result.size() > 0)
+        if (calc_status == CalcStatus::Done) [[ likely ]] {
             return result;
-
-        refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
-            if constexpr (refl::trait::is_field<decltype(member)>())
-                result[member.name.c_str()] = decltype(member)::value_type::get_description();
-        });
-
+        } else if (calc_status == CalcStatus::Calculating) {
+            while (calc_status != CalcStatus::Done) { 
+                /* Wait other thread to finish calculation */ 
+            }
+        } else if (calc_status == CalcStatus::NotCalculated) {
+            calc_status = CalcStatus::Calculating;
+            result.reserve(Model::num_of_fields());
+            refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
+                if constexpr (refl::trait::is_field<decltype(member)>())
+                    result[member.name.c_str()] = decltype(member)::value_type::get_description();
+            });
+            calc_status = CalcStatus::Done;
+        }
         return result;
     }
         
