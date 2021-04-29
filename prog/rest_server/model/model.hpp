@@ -141,11 +141,16 @@ struct Model {
     }
 
     [[nodiscard]] static auto get_description() {
-        std::unordered_map<const char *, FieldDescription> result; result.reserve(num_of_fields());
+        static std::unordered_map<const char *, FieldDescription> result; result.reserve(Model::num_of_fields());
+
+        if (result.size() > 0)
+            return result;
+
         refl::util::for_each(refl::member_list<Derived>{}, [&](auto member) {
             if constexpr (refl::trait::is_field<decltype(member)>())
                 result[member.name.c_str()] = decltype(member)::value_type::get_description();
         });
+
         return result;
     }
         
