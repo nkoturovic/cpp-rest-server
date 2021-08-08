@@ -4,14 +4,14 @@ nlohmann_json/3.9.1
 restinio/0.6.11
 fmt/7.1.2
 spdlog/1.8.1
-SOCI/4.0.1@kotur/stable
+soci/4.0.2
 cpp-jwt/1.2
 http-parser/2.8.1@bincrafters/stable
 
 [options]
-SOCI:soci_cxx11=True
-SOCI:with_sqlite3=True
-SOCI:shared=True
+# soci:soci_cxx11=True
+soci:with_sqlite3=True
+soci:shared=True
 
 [generators]
 cmake
