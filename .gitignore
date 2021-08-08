@@ -8,3 +8,4 @@ compile_commands.json
 *build*
 CMakeLists.txt.user
 cmake/conan.cmake
+.cache
