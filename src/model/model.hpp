@@ -99,7 +99,7 @@ public:
 
 template <class Derived>
 struct Model {
-    static auto consteval num_of_fields() { 
+    static auto constexpr num_of_fields() { 
         return refl::member_list<Derived>::size;
     }
 
@@ -229,8 +229,8 @@ struct Model {
 
 struct Empty final : Model<Empty> {};
 
-void from_json(const nlohmann::json&, Empty&) {};
-void to_json(nlohmann::json&, const Empty&) {};
+inline void from_json(const nlohmann::json&, Empty&) {};
+inline void to_json(nlohmann::json&, const Empty&) {};
 
 }
 
