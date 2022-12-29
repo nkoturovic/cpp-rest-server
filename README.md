@@ -131,4 +131,25 @@ while (getUsersStmt.fetch())
 
 ## Using and building APP
 
-Comming soon, stay tuned.
+### Requirements
+
+- A compiler with c++20 support
+- [CMake build tool](https://cmake.org)
+- [Conan package manager](https://conan.io/)
+- [Perl scripting language](https://www.perl.org/) (One of the dependencies require it for generating Makefiles)
+
+### Building
+
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j8
+```
+
+### Running
+
+```
+cd ./build/bin/
+./rest-server
+```
