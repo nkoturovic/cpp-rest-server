@@ -121,12 +121,17 @@ inline void register_routes(rs::Router &router, soci::connection_pool &db_pool)
 
                    auto cmd = fmt::format("convert -thumbnail 800x800 static/photos/{}{} static/photos/thumbnails/{}.jpg", 
                                                  *photo.id.opt_value, *photo.extension.opt_value, *photo.id.opt_value);
-                   std::system(cmd.c_str());
+
+
+                   #pragma GCC diagnostic push
+                   #pragma GCC diagnostic ignored "-Wunused-result"
+                     std::system(cmd.c_str());
+                   #pragma GCC diagnostic pop
  
                    rs::actions::insert_model_into_db(auth_tok,
                            {.owner_field_name = "uploaded_by"}, db, "photos", std::move(photo));
 
-                  return rs::success_response(std::to_string(*photo.id.opt_value));
+                   return rs::success_response(std::to_string(*photo.id.opt_value));
                }
            ), req);
     });

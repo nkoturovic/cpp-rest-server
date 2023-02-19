@@ -1,14 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+option(CPP_REST_SERVER_BUILD_EXAMPLES "Build examples" ON)
+
 # Name of the project
-project(Rest-Server)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-include(cmake/RunConan.cmake)
-run_conan()
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)  # Includes the contents of the conanbuildinfo.cmake file.
-conan_basic_setup()  # Prepares the CMakeList.txt for Conan.
+project(Cpp-Rest-Server)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,14 +14,21 @@ set(HEADERS
     src/model/field.hpp src/model/constraint.hpp src/model/model.hpp
 )
 
+find_package(Boost REQUIRED COMPONENTS date_time)
+find_package(fmt REQUIRED)
+find_package(SOCI REQUIRED)
+find_package(cpp-jwt REQUIRED)
+
 set(SRC_LIST src/main.cpp)
 include_directories(src)
 
-add_executable(rest-server ${SRC_LIST} ${HEADERS})
+add_executable(cpp-rest-server ${SRC_LIST} ${HEADERS})
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/db.sqlite
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-target_link_libraries(rest-server ${CONAN_LIBS})
+target_link_libraries(cpp-rest-server fmt::fmt SOCI::soci_core SOCI::soci_sqlite3 cpp-jwt::cpp-jwt http_parser)
 
-add_subdirectory(examples)
+if (CPP_REST_SERVER_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()

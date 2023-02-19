@@ -7,6 +7,6 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../db.sqlite
 
 include_directories(../src)
 
-target_link_libraries(soci_example PRIVATE pthread CONAN_PKG::fmt CONAN_PKG::soci)
-target_link_libraries(json_example PRIVATE pthread CONAN_PKG::fmt)
-target_link_libraries(constraint_example PRIVATE pthread CONAN_PKG::fmt)
+target_link_libraries(soci_example PRIVATE pthread fmt::fmt SOCI::soci_core SOCI::soci_sqlite3)
+target_link_libraries(json_example PRIVATE pthread fmt::fmt)
+target_link_libraries(constraint_example PRIVATE pthread fmt::fmt)

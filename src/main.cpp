@@ -1,6 +1,7 @@
 #include <restinio/all.hpp>
 #include <soci/sqlite3/soci-sqlite3.h>
 #include <soci/connection-pool.h>
+#include <cstdlib>
 
 #include <span>
 #include "router.hpp"
@@ -13,16 +14,25 @@ using namespace restinio;
 int main(int argc, char * argv[])
 {
     namespace epr = restinio::router::easy_parser_router;
-    auto args = rs::parse_cmdline_args(std::span(argv, argc));
+    auto argv_span = std::span(argv, argc);
+    auto args = rs::parse_cmdline_args(argv_span);
+
+    if (args.help || argv_span.size() <= 1) {
+        fmt::print("USAGE {} -d <path_to_db>\n", *argv_span.begin());
+        fmt::print("{}", rs::CmdLineArgs::help_string);
+        std::exit(0);
+    }
+
     auto server_address = args.address.value_or("localhost");
     auto server_port = args.port.value_or(3000u);
+    auto db_config = args.db_config.value_or("db.sqlite");
 
     constexpr std::size_t pool_size = 16;
 
     soci::connection_pool db_pool(pool_size);
     for (size_t i = 0; i != pool_size; ++i) {
         soci::session& sql = db_pool.at(i);
-        sql.open(soci::sqlite3, "dbname=db.sqlite");
+        sql.open(soci::sqlite3, fmt::format("dbname={}" ,db_config));
     }
 
     auto router = rs::Router(std::make_unique<restinio::router::easy_parser_router_t>());

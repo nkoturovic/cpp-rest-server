@@ -62,6 +62,14 @@ constexpr void throw_if(bool condition, nlohmann::json &&info = {}) {
 struct CmdLineArgs {
     std::optional<const char*> address;
     std::optional<unsigned> port;
+    std::optional<const char *> db_config;
+    bool help {false};
+
+    static constexpr const char * help_string = 
+          "--address -a\t\tServer address\n"
+          "--port -p\t\tServer port\n"
+          "--db -d\t\t\tPath to db to be used\n"
+          "-h --help\t\tShow help menu\n";
 };
 
 CmdLineArgs parse_cmdline_args(std::span<char *> args)
@@ -76,6 +84,10 @@ CmdLineArgs parse_cmdline_args(std::span<char *> args)
             result.address = *it_next;
         else if ((curr == "--port" || curr == "-p") && it_next != it_end)
             result.port = std::strtoul(*it_next, nullptr, 10);
+        else if ((curr == "--db" || curr == "-d") && it_next != it_end)
+            result.db_config = *it_next;
+        else if ((curr == "--help" || curr == "-h"))
+            result.help = true;
     }
     return result;
 };
