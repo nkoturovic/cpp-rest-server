@@ -1,0 +1,78 @@
+{
+  "nodes": {
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1676283394,
+        "narHash": "sha256-XX2f9c3iySLCw54rJ/CZs+ZK6IQy7GXNY4nSOyu2QG4=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "3db36a8b464d0c4532ba1c7dda728f4576d6d073",
+        "type": "github"
+      },
+      "original": {
+        "id": "flake-utils",
+        "type": "indirect"
+      }
+    },
+    "koturNixPkgs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676837329,
+        "narHash": "sha256-Sv1H5mH0BdsVsTdGuH7NiWoPJ318P7p312PWN1//bxM=",
+        "owner": "nkoturovic",
+        "repo": "kotur-nixpkgs",
+        "rev": "86d77f6b0813229337f567f98b5c54cbab7ac4b1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nkoturovic",
+        "repo": "kotur-nixpkgs",
+        "rev": "86d77f6b0813229337f567f98b5c54cbab7ac4b1",
+        "type": "github"
+      }
+    },
+    "miniCompileCommands": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1671387409,
+        "narHash": "sha256-fxtsI6EupEHdUYEtfrItKYQhNanFtyV7cHCrz+/QP44=",
+        "owner": "danielbarter",
+        "repo": "mini_compile_commands",
+        "rev": "22c7753d9bd60932c1acfca6415c90bdb43dad2f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "danielbarter",
+        "ref": "v0.4",
+        "repo": "mini_compile_commands",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1676718858,
+        "narHash": "sha256-giQecvcifVLNHCC9lMfTGP09tNxXhOMw+d/aql7MhRw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e6d5772f3515b8518d50122471381feae7cbae36",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-22.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "koturNixPkgs": "koturNixPkgs",
+        "miniCompileCommands": "miniCompileCommands",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
