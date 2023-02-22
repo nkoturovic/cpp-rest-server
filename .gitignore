@@ -8,3 +8,4 @@ compile_commands.json
 cmake/conan.cmake
 .vscode
 .cache
+result
