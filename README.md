@@ -1,6 +1,18 @@
+[![From template](https://img.shields.io/badge/From-Template-lighblack/?style=flat&color=white&logo=github)](https://github.com/nkoturovic/cpp-nix-project-template)
+[![iso-cpp](https://img.shields.io/badge/C++-blue.svg?style=flat&logo=c%2B%2B)](https://isocpp.org/)
+[![Built with nix](https://img.shields.io/static/v1?style=flat&logo=nixos&logoColor=white&label=&message=Built%20with%20Nix&color=41439a)](https://builtwithnix.org/)
+[![kotur.me](https://img.shields.io/badge/Author-kotur.me-blue?style=flat)](https://kotur.me)
+
 # C++ REST Server 
 
+Rest (CRUD) API made for web programming course, initially used as a backend for the photo sharing platform university project.
+Now is just a demo project, showcasing some of the interesting meta-programming approaches.
+
 ## Dependencies
+
+Nix can get all dependencies for you, no need for pulling your hair out!
+
+To keep your hair, look at the [Building with Nix](#building-with-nix) section.
 
 - c++20 compatible compiler (GCC/Clang)
 - **fmt-lib** (restinio dependency): [https://github.com/fmtlib/fmt](https://github.com/fmtlib/fmt)
@@ -129,27 +141,35 @@ while (getUsersStmt.fetch())
 ...
 ```
 
-## Using and building APP
+### Building with Nix
 
-### Requirements
+It can be built with the [Nix package manager](https://nixos.org/download.html)
 
-- A compiler with c++20 support
-- [CMake build tool](https://cmake.org)
-- [Perl scripting language](https://www.perl.org/) (One of the dependencies require it for generating Makefiles)
-- Other specified dependencies (can be built with the Nix package manager)
-
-### Building
-
+```sh
+nix-build
 ```
+
+And then run it
+
+```sh
+./result/bin/cpp-rest-server
+```
+
+### Develop with nix shell
+
+```sh
+# Entering the shell will automatically install all of the dependencies
+nix-shell 
+# Optinally add --pure flag to isolate shell from the rest of the system
+nix-shell --pure
+```
+
+Within the shell, you can just build it with CMake
+
+```sh
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j8
-```
-
-### Running
-
-```
-cd ./build/bin/
-./rest-server
+./cpp-rest-server
 ```
