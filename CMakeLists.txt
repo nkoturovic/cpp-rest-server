@@ -31,4 +31,7 @@ target_link_libraries(cpp-rest-server fmt::fmt SOCI::soci_core SOCI::soci_sqlite
 
 if (CPP_REST_SERVER_BUILD_EXAMPLES)
     add_subdirectory(examples)
+    install(TARGETS cpp-rest-server ${CPP_REST_SERVER_EXAMPLES} DESTINATION bin)
+else()
+    install(TARGETS cpp-rest-server DESTINATION bin)
 endif()

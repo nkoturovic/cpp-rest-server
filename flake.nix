@@ -5,7 +5,7 @@
     flake = false;
   };
   inputs.koturNixPkgs = {
-    url = github:nkoturovic/kotur-nixpkgs?rev=86d77f6b0813229337f567f98b5c54cbab7ac4b1;
+    url = github:nkoturovic/kotur-nixpkgs/v0.3;
     flake = false;
   };
   outputs = {
@@ -16,7 +16,7 @@
   }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
-      package = import ./default.nix {inherit pkgs;};
+      package = import ./default.nix {inherit system pkgs;};
     in {
       packages.default = package;
       devShells.default = package.shell;
