@@ -37,14 +37,14 @@
   # Some platforms have different toolchains in their StdEnv definition by default
   # To ensure gcc being default, we use gccStdenv as a base instead of just stdenv
   # mkDerivation is the main function used to build packages with the Stdenv
-  package = pkgs.stdenv.mkDerivation (self: {
+  package = pkgs.gccStdenv.mkDerivation (self: {
     name = "cpp-rest-server";
     version = "0.0.3";
 
     # Programs and libraries used at build-time that, if they are a compiler or similar tool
     # they produce code to run at run-time—i.e. tools used to build the new derivation
     nativeBuildInputs = with pkgs; [
-      stdenv # Also used bellow with mini_compile_commands in shell
+      gccStdenv # Also used bellow with mini_compile_commands in shell
       cowsay
       ncurses
       cmake
@@ -119,7 +119,7 @@
   # Using mini_compile_commands to export compile_commands.json
   # https://github.com/danielbarter/mini_compile_commands/
   # Look at the README.md file for instructions on generating compile_commands.json
-  mcc-env = (pkgs.callPackage miniCompileCommands {}).wrap pkgs.stdenv;
+  mcc-env = (pkgs.callPackage miniCompileCommands {}).wrap pkgs.gccStdenv;
 
   # Development shell
   shell = (pkgs.mkShell.override {stdenv = mcc-env;}) {
